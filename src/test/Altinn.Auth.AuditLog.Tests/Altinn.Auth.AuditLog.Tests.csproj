@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Altinn.Auth.AuditLog\Altinn.Auth.AuditLog.csproj" />
+    <ProjectReference Include="..\..\Altinn.Auth.AuditLog\Altinn.Auth.AuditLog.csproj" />
   </ItemGroup>
 
   <ItemGroup>
