@@ -1,6 +1,7 @@
 ﻿using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Services.Interfaces;
 using Altinn.Auth.AuditLog.Filters;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 
@@ -38,7 +39,7 @@ namespace Altinn.Auth.AuditLog.Controllers
             try
             {
                 AuthenticationEvent response = await _authenticationEventService.CreateAuthenticationEvent(authenticationEvent);
-                return Created("/resourceregistry/api/v1/resource/" , authenticationEvent);
+                return Ok();
             }
             catch (Exception ex)
             {

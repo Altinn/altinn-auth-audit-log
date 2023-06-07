@@ -3,6 +3,7 @@ using Altinn.Auth.AuditLog.Core.Repositories;
 using Altinn.Auth.AuditLog.Core.Services;
 using Altinn.Auth.AuditLog.Core.Services.Interfaces;
 using Altinn.Auth.AuditLog.Persistence;
+using Altinn.Auth.AuditLog.Tests.Mocks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,7 +24,7 @@ namespace Altinn.Auth.AuditLog.Tests.Utils
             {
                 builder.ConfigureTestServices(services =>
                 {
-                    services.AddSingleton<IAuthenticationEventRepository, AuthenticationEventRepository>();
+                    services.AddSingleton<IAuthenticationEventRepository, AuthenticationEventRepositoryMock>();
                     services.AddSingleton<IAuthenticationEventService, AuthenticationEventService>();
 
                 });

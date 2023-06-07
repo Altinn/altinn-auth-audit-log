@@ -68,21 +68,6 @@ namespace Altinn.Auth.AuditLog.Persistence
             }
         }
 
-        //private static AuthenticationEvent GetAuthenticationEvent(NpgsqlDataReader reader)
-        //{
-        //    return new AuthenticationEvent
-        //    {
-        //        TimeStamp = reader.GetFieldValue<DateTime>("timestamp"),
-        //        UserId = reader.GetFieldValue<string>("userid"),
-        //        SupplierId = reader.GetFieldValue<string>("supplierid"),
-        //        EventType = reader.GetFieldValue<string>("eventtype"),
-        //        OrgNumber = reader.GetFieldValue<string>("orgnumber"),
-        //        AuthenticationMethod = reader.GetFieldValue<string>("authenticationmethod"),
-        //        AuthenticationLevel = reader.GetFieldValue<string>("authenticationlevel"),
-        //        SessionId = reader.GetFieldValue<string>("sessionid")
-        //    };
-        //}
-
         private static AuthenticationEvent GetAuthenticationEvent(NpgsqlDataReader reader)
         {
             if (reader["authenticationeventjson"] != DBNull.Value)

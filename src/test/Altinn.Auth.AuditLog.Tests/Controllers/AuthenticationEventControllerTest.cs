@@ -55,8 +55,6 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
 
             };
 
-            _authenticationEventRepositoryMock.Setup(x => x.InsertAuthenticationEvent(authenticationEvent)).ReturnsAsync(authenticationEvent);            ;
-
             string requestUri = "auditlog/api/v1/authenticationevent/";
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
@@ -69,7 +67,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
 
             HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
 
-            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
     }
 }
