@@ -69,5 +69,25 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
+
+        [Fact]
+        public async Task CreateAuthenticationEvent_Badrequest()
+        {
+            AuthenticationEvent authenticationEvent = null;
+
+            string requestUri = "auditlog/api/v1/authenticationevent/";
+
+            HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(authenticationEvent), Encoding.UTF8, "application/json")
+            };
+
+            httpRequestMessage.Headers.Add("Accept", "application/json");
+            httpRequestMessage.Headers.Add("ContentType", "application/json");
+
+            HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
     }
 }
