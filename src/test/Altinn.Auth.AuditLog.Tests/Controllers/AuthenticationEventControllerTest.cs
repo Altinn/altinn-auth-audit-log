@@ -67,13 +67,41 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
 
             HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
 
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         }
 
         [Fact]
-        public async Task CreateAuthenticationEvent_Badrequest()
+        public async Task CreateAuthenticationEvent_Badrequest_nullobject()
         {
             AuthenticationEvent authenticationEvent = null;
+
+            string requestUri = "auditlog/api/v1/authenticationevent/";
+
+            HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(authenticationEvent), Encoding.UTF8, "application/json")
+            };
+
+            httpRequestMessage.Headers.Add("Accept", "application/json");
+            httpRequestMessage.Headers.Add("ContentType", "application/json");
+
+            HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task CreateAuthenticationEvent_Badrequest_missingrequiredfield()
+        {
+            AuthenticationEvent authenticationEvent = new AuthenticationEvent()
+            {
+                TimeStamp = DateTime.UtcNow,
+                AuthenticationMethod = "BankId",
+                EventType = "LoggedIn",
+                SessionId = "83343b4c-865d-4e6c-888d-33bc7533ea2d",
+                AuthenticationLevel = "4",
+
+            };
 
             string requestUri = "auditlog/api/v1/authenticationevent/";
 
