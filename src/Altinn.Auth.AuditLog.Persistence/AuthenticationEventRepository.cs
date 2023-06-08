@@ -18,7 +18,6 @@ namespace Altinn.Auth.AuditLog.Persistence
         private readonly ILogger _logger;
         private readonly string _connectionString;
 
-        //
         private readonly string insertAuthenticationEvent = "select * from authentication.create_authenticationevent(@_authenticationeventjson)";
 
         /// <summary>

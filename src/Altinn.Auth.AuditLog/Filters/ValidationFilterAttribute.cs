@@ -13,6 +13,14 @@ namespace Altinn.Auth.AuditLog.Filters
             }
         }
 
-        public void OnActionExecuted(ActionExecutedContext context) { }
+        /// <summary>
+        /// Post execution
+        /// </summary>
+        /// <param name="context">context</param>
+        /// <exception cref="NotImplementedException"></exception>
+        public void OnActionExecuted(ActionExecutedContext context) 
+        {
+            throw new NotImplementedException();        
+        }
     }
 }
