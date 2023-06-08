@@ -1,5 +1,5 @@
 ﻿using Altinn.Auth.AuditLog.Core.Models;
-using Altinn.Auth.AuditLog.Core.Repositories;
+using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;

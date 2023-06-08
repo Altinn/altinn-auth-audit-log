@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Altinn.Auth.AuditLog.Core.Models;
+using Altinn.Auth.AuditLog.Core.Repositories;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Persistence.Configuration;
 using Microsoft.Extensions.Logging;
@@ -13,21 +14,21 @@ using Npgsql;
 
 namespace Altinn.Auth.AuditLog.Persistence
 {
-    public class AuthenticationEventRepository : IAuthenticationEventRepository
+    public class AuthorizationEventRepository : IAuthorizationEventRepository
     {
         private readonly ILogger _logger;
         private readonly string _connectionString;
 
-        private readonly string insertAuthenticationEvent = "select * from authentication.create_authenticationevent(@_authenticationeventjson)";
+        private readonly string insertAuthorizationEvent = "select * from authorization.create_authorizationevent(@_authorizationeventjson)";
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AuthenticationEventRepository"/> class
+        /// Initializes a new instance of the <see cref="AuthorizationEventRepository"/> class
         /// </summary>
         /// <param name="postgresSettings">The postgreSQL configurations for AuditLogDB</param>
         /// <param name="logger">handler for logger service</param>
-        public AuthenticationEventRepository(
+        public AuthorizationEventRepository(
             IOptions<PostgreSQLSettings> postgresSettings,
-            ILogger<AuthenticationEventRepository> logger) 
+            ILogger<AuthorizationEventRepository> logger) 
         { 
             _logger = logger;
             _connectionString = string.Format(
@@ -35,27 +36,27 @@ namespace Altinn.Auth.AuditLog.Persistence
                                     postgresSettings.Value.AuthAuditLogDbPwd);                                   
         }
 
-        public async Task<AuthenticationEvent> InsertAuthenticationEvent(AuthenticationEvent authenticationEvent)
+        public async Task<AuthorizationEvent> InsertAuthorizationEvent(AuthorizationEvent authorizationEvent)
         {
-            if (authenticationEvent == null) 
+            if (authorizationEvent == null) 
             {
-                throw new ArgumentNullException(nameof(authenticationEvent));
+                throw new ArgumentNullException(nameof(authorizationEvent));
             }
 
-            var json = System.Text.Json.JsonSerializer.Serialize(authenticationEvent, new System.Text.Json.JsonSerializerOptions() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+            var json = System.Text.Json.JsonSerializer.Serialize(authorizationEvent, new System.Text.Json.JsonSerializerOptions() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
 
             try
             {
                 await using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
                 await conn.OpenAsync();
 
-                NpgsqlCommand pgcom = new NpgsqlCommand(insertAuthenticationEvent, conn);
+                NpgsqlCommand pgcom = new NpgsqlCommand(insertAuthorizationEvent, conn);
                 pgcom.Parameters.AddWithValue("_authenticationeventjson", NpgsqlTypes.NpgsqlDbType.Jsonb, json);
 
                 using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
                 if (reader.Read())
                 {
-                    return GetAuthenticationEvent(reader);
+                    return GetAuthorizationEvent(reader);
                 }
 
                 return null;
@@ -67,13 +68,13 @@ namespace Altinn.Auth.AuditLog.Persistence
             }
         }
 
-        private static AuthenticationEvent GetAuthenticationEvent(NpgsqlDataReader reader)
+        private static AuthorizationEvent GetAuthorizationEvent(NpgsqlDataReader reader)
         {
-            if (reader["authenticationeventjson"] != DBNull.Value)
+            if (reader["authorizationeventjson"] != DBNull.Value)
             {
-                var jsonb = reader.GetString("authenticationeventjson");
+                var jsonb = reader.GetString("authorizationeventjson");
 
-                AuthenticationEvent? authEvent = System.Text.Json.JsonSerializer.Deserialize<AuthenticationEvent>(jsonb, new System.Text.Json.JsonSerializerOptions() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }) as AuthenticationEvent;
+                AuthorizationEvent? authEvent = System.Text.Json.JsonSerializer.Deserialize<AuthorizationEvent>(jsonb, new System.Text.Json.JsonSerializerOptions() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }) as AuthorizationEvent;
                 return authEvent;
             }
 

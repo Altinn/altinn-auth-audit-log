@@ -1,5 +1,5 @@
 using Altinn.Auth.AuditLog.Configuration;
-using Altinn.Auth.AuditLog.Core.Repositories;
+using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Core.Services;
 using Altinn.Auth.AuditLog.Core.Services.Interfaces;
 using Altinn.Auth.AuditLog.Filters;

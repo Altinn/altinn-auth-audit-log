@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Altinn.Auth.AuditLog.Core.Repositories
+namespace Altinn.Auth.AuditLog.Core.Repositories.Interfaces
 {
     /// <summary>
     /// Interface for PostgresSQL operations on authentication event

@@ -1,6 +1,6 @@
 ﻿using Altinn.Auth.AuditLog.Controllers;
 using Altinn.Auth.AuditLog.Core.Models;
-using Altinn.Auth.AuditLog.Core.Repositories;
+using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Tests.Utils;
 using Moq;
 using System;
