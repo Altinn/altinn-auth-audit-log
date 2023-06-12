@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Altinn.Auth.AuditLog.Filters
 {
+    [ExcludeFromCodeCoverage]
     public class ValidationFilterAttribute : IActionFilter
     {
         public void OnActionExecuting(ActionExecutingContext context)
@@ -13,6 +15,10 @@ namespace Altinn.Auth.AuditLog.Filters
             }
         }
 
-        public void OnActionExecuted(ActionExecutedContext context) { }
+        /// <summary>
+        /// Post execution
+        /// </summary>
+        /// <param name="context">context</param>        
+        public void OnActionExecuted(ActionExecutedContext context) {}
     }
 }

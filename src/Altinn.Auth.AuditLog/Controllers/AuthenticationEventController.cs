@@ -39,20 +39,14 @@ namespace Altinn.Auth.AuditLog.Controllers
             try
             {
                 AuthenticationEvent response = await _authenticationEventService.CreateAuthenticationEvent(authenticationEvent);
-                return Created("/auditlog/api/v1/authenticationevent/", authenticationEvent);
+                return Created("/auditlog/api/v1/authenticationevent", authenticationEvent);
             }
             catch (Exception ex)
             {
-                if (ex is ValidationException || ex is ArgumentException)
-                {
-                    ModelState.AddModelError("Validation Error", ex.Message);
-                    return new ObjectResult(ProblemDetailsFactory.CreateValidationProblemDetails(HttpContext, ModelState));
-                }
-
-                _logger.LogError(ex, "Internal exception occurred during maskinportenschema delegation");
+                _logger.LogError(ex, "Internal exception occurred during logging of authentication event");
                 return new ObjectResult(ProblemDetailsFactory.CreateProblemDetails(HttpContext));
             }
-            
+
         }
     }
 }

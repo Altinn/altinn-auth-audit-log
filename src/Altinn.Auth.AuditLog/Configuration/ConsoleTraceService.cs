@@ -4,7 +4,7 @@ using Yuniql.Extensibility;
 namespace Altinn.Auth.AuditLog.Configuration
 {
     /// <summary>
-    /// Copied from sample project.
+    /// Postgres Logging Configuration
     /// </summary>
     [ExcludeFromCodeCoverage]
     public class ConsoleTraceService : ITraceService
