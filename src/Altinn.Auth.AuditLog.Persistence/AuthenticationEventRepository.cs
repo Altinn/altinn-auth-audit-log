@@ -18,7 +18,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         private readonly ILogger _logger;
         private readonly string _connectionString;
 
-        private readonly string insertAuthenticationEvent = "select * from authentication.create_authenticationevent(@_authenticationeventjson)";
+        private readonly string insertAuthenticationEvent = "select * from authentication.create_authenticationevent(@_userid,@_supplierid,@_eventtype,@_orgnumber,@_authenticationmethod,@_authenticationlevel,@_sessionid)";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthenticationEventRepository"/> class
@@ -50,7 +50,13 @@ namespace Altinn.Auth.AuditLog.Persistence
                 await conn.OpenAsync();
 
                 NpgsqlCommand pgcom = new NpgsqlCommand(insertAuthenticationEvent, conn);
-                pgcom.Parameters.AddWithValue("_authenticationeventjson", NpgsqlTypes.NpgsqlDbType.Jsonb, json);
+                pgcom.Parameters.AddWithValue("_userid", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.UserId);
+                pgcom.Parameters.AddWithValue("_supplierid", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.SupplierId);
+                pgcom.Parameters.AddWithValue("_eventtype", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.EventType);
+                pgcom.Parameters.AddWithValue("_orgnumber", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.OrgNumber);
+                pgcom.Parameters.AddWithValue("_authenticationmethod", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.AuthenticationMethod);
+                pgcom.Parameters.AddWithValue("_authenticationlevel", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.AuthenticationLevel);
+                pgcom.Parameters.AddWithValue("_sessionid", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.SessionId);
 
                 using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
                 if (reader.Read())
@@ -69,15 +75,17 @@ namespace Altinn.Auth.AuditLog.Persistence
 
         private static AuthenticationEvent GetAuthenticationEvent(NpgsqlDataReader reader)
         {
-            if (reader["authenticationeventjson"] != DBNull.Value)
+            return new AuthenticationEvent
             {
-                var jsonb = reader.GetString("authenticationeventjson");
-
-                AuthenticationEvent? authEvent = System.Text.Json.JsonSerializer.Deserialize<AuthenticationEvent>(jsonb, new System.Text.Json.JsonSerializerOptions() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }) as AuthenticationEvent;
-                return authEvent;
-            }
-
-            return null;
+                TimeStamp = reader.GetFieldValue<DateTime>("timestamp"),
+                UserId = reader.GetFieldValue<string>("userid"),
+                SupplierId = reader.GetFieldValue<string>("supplierid"),
+                EventType = reader.GetFieldValue<string>("eventtype"),
+                OrgNumber = reader.GetFieldValue<string>("orgnumber"),
+                AuthenticationMethod = reader.GetFieldValue<string>("authenticationmethod"),
+                AuthenticationLevel = reader.GetFieldValue<string>("authenticationlevel"),
+                SessionId = reader.GetFieldValue<string>("sessionid")
+            };
         }
     }
 }

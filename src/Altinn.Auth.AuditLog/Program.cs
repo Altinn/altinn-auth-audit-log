@@ -72,5 +72,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 {
     services.AddSingleton<IAuthenticationEventService, AuthenticationEventService>();
     services.AddSingleton<IAuthenticationEventRepository, AuthenticationEventRepository>();
+    services.AddSingleton<IAuthorizationEventService, AuthorizationEventService>();
+    services.AddSingleton<IAuthorizationEventRepository, AuthorizationEventRepository>();
     services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
 }

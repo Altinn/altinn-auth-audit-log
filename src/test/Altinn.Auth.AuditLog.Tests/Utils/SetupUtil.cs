@@ -32,5 +32,21 @@ namespace Altinn.Auth.AuditLog.Tests.Utils
             factory.Server.AllowSynchronousIO = true;
             return factory.CreateClient();
         }
+
+        public static HttpClient GetTestClient(
+            CustomWebApplicationFactory<AuthorizationEventController> customFactory)
+        {
+            WebApplicationFactory<AuthorizationEventController> factory = customFactory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.AddSingleton<IAuthenticationEventRepository, AuthenticationEventRepositoryMock>();
+                    services.AddSingleton<IAuthorizationEventService, AuthorizationEventService>();
+
+                });
+            });
+            factory.Server.AllowSynchronousIO = true;
+            return factory.CreateClient();
+        }
     }
 }

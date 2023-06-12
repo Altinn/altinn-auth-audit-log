@@ -19,7 +19,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         private readonly ILogger _logger;
         private readonly string _connectionString;
 
-        private readonly string insertAuthorizationEvent = "select * from authorization.create_authorizationevent(@_authorizationeventjson)";
+        private readonly string insertAuthorizationEvent = "select * from authz.create_authorizationevent(@_subjectuserid,@_subjectparty,@_resourcepartyid,@_resource,@_instanceid,@_operation,@_timetodelete,@_ipadress,@_contextrequestjson)";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthorizationEventRepository"/> class
@@ -51,7 +51,15 @@ namespace Altinn.Auth.AuditLog.Persistence
                 await conn.OpenAsync();
 
                 NpgsqlCommand pgcom = new NpgsqlCommand(insertAuthorizationEvent, conn);
-                pgcom.Parameters.AddWithValue("_authenticationeventjson", NpgsqlTypes.NpgsqlDbType.Jsonb, json);
+                pgcom.Parameters.AddWithValue("_subjectuserid", NpgsqlTypes.NpgsqlDbType.Text, authorizationEvent.SubjectUserId);
+                pgcom.Parameters.AddWithValue("_subjectparty", NpgsqlTypes.NpgsqlDbType.Text, authorizationEvent.SubjectParty);
+                pgcom.Parameters.AddWithValue("_resourcepartyid", NpgsqlTypes.NpgsqlDbType.Text, authorizationEvent.ResourcePartyId);
+                pgcom.Parameters.AddWithValue("_resource", NpgsqlTypes.NpgsqlDbType.Text, authorizationEvent.Resource);
+                pgcom.Parameters.AddWithValue("_instanceid", NpgsqlTypes.NpgsqlDbType.Text, authorizationEvent.InstanceId);
+                pgcom.Parameters.AddWithValue("_operation", NpgsqlTypes.NpgsqlDbType.Text, authorizationEvent.Operation);
+                pgcom.Parameters.AddWithValue("_timetodelete", NpgsqlTypes.NpgsqlDbType.Text, authorizationEvent.TimeToDelete);
+                pgcom.Parameters.AddWithValue("_ipadress", NpgsqlTypes.NpgsqlDbType.Text, authorizationEvent.IpAdress);
+                pgcom.Parameters.AddWithValue("_contextrequestjson", NpgsqlTypes.NpgsqlDbType.Jsonb, json);
 
                 using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
                 if (reader.Read())
@@ -70,14 +78,26 @@ namespace Altinn.Auth.AuditLog.Persistence
 
         private static AuthorizationEvent GetAuthorizationEvent(NpgsqlDataReader reader)
         {
-            if (reader["authorizationeventjson"] != DBNull.Value)
+            ContextRequest? contextRequest = null;
+            if (reader["contextrequestjson"] != DBNull.Value)
             {
-                var jsonb = reader.GetString("authorizationeventjson");
+                var jsonb = reader.GetString("contextrequestjson");
 
-                AuthorizationEvent? authEvent = System.Text.Json.JsonSerializer.Deserialize<AuthorizationEvent>(jsonb, new System.Text.Json.JsonSerializerOptions() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }) as AuthorizationEvent;
-                return authEvent;
+                contextRequest = System.Text.Json.JsonSerializer.Deserialize<ContextRequest>(jsonb, new System.Text.Json.JsonSerializerOptions() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }) as ContextRequest;
             }
 
+            return new AuthorizationEvent
+            {
+                SubjectUserId = reader.GetFieldValue<string>("subjectuserid"),
+                SubjectParty = reader.GetFieldValue<string>("subjectparty"),
+                ResourcePartyId = reader.GetFieldValue<string>("resourcepartyid"),
+                Resource = reader.GetFieldValue<string>("resource"),
+                InstanceId = reader.GetFieldValue<string>("instanceid"),
+                Operation = reader.GetFieldValue<string>("operation"),
+                TimeToDelete = reader.GetFieldValue<string>("timetodelete"),
+                IpAdress = reader.GetFieldValue<string>("ipadress"),
+                ContextRequestJson = contextRequest
+            };
             return null;
         }
     }

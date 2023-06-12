@@ -3,7 +3,7 @@
 namespace Altinn.Auth.AuditLog.Core.Models
 {
     /// <summary>
-    /// This model describes an authentication event. An authentication event is an action triggered when a user authenticates to altinn
+    /// This model describes an authorization event. An authorization event is an action triggered when a user requests access to an operation
     /// </summary>
     public class AuthorizationEvent
     {
@@ -13,39 +13,49 @@ namespace Altinn.Auth.AuditLog.Core.Models
         public DateTime TimeStamp { get; set; }
 
         /// <summary>
-        /// Id of the user that triggered that authorization event 
+        /// The userid for the user that requested authorization
         /// </summary>
         [Required]
-        public string UserId { get; set; }
+        public string SubjectUserId { get; set; }
 
         /// <summary>
-        /// Relevant if the event is triggered by enterprise user
+        /// The partyid for the user that requested authorization
         /// </summary>
-        public string? SupplierId { get; set; }
+        public string? SubjectParty { get; set; }
 
         /// <summary>
-        /// The type of authorization event
+        /// The partyId for resource owner when applicable
         /// </summary>
-        public string EventType { get; set; }
+        public string ResourcePartyId { get; set; }
 
         /// <summary>
-        /// Relevant if the event is triggered by enterprise user?
+        /// The Main resource Id (app, external resource +)
         /// </summary>
-        public string? OrgNumber { get; set; }
+        public string? Resource { get; set; }
 
         /// <summary>
-        /// The type of authentication used by the user (BankId etc)
+        /// Instance Id when applicable
         /// </summary>
-        public string AuthenticationMethod { get; set; }
+        public string InstanceId { get; set; }
 
         /// <summary>
-        /// The level of authentication used by the user (1, 2,  etc)
+        /// Type of operation
         /// </summary>
-        public string AuthenticationLevel { get; set; }
+        public string Operation { get; set; }
 
         /// <summary>
-        /// The session id
+        /// Duration of log retention
         /// </summary>
-        public string SessionId { get; set; }
+        public string TimeToDelete { get; set; }
+
+        /// <summary>
+        /// The Ip adress of the calling party
+        /// </summary>
+        public string IpAdress { get; set; }
+
+        /// <summary>
+        /// The whole context request
+        /// </summary>
+        public ContextRequest ContextRequestJson { get; set; }
     }
 }

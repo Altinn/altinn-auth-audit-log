@@ -37,8 +37,8 @@ namespace Altinn.Auth.AuditLog.Controllers
         {
             try
             {
-                AuthenticationEvent response = await _authorizationEventService.CreateAuthenticationEvent(authorizationEvent);
-                return Ok();
+                AuthorizationEvent response = await _authorizationEventService.CreateAuthorizationEvent(authorizationEvent);
+                return Created("/auditlog/api/v1/authorizationevent/", authorizationEvent);
             }
             catch (Exception ex)
             {

@@ -3,8 +3,13 @@ CREATE TABLE IF NOT EXISTS authentication.eventlog
 (
 	identifier bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	created timestamp with time zone NOT NULL,
-	modified timestamp with time zone,
-	authenticationeventjson jsonb
+	userid text,
+	supplierid text,
+	eventtype text,
+	orgnumber text,
+	authenticationmethod text,
+	authenticationlevel text,
+	sessionid text
 )
 TABLESPACE pg_default;
 
