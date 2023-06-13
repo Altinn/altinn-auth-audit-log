@@ -42,12 +42,6 @@ namespace Altinn.Auth.AuditLog.Controllers
             }
             catch (Exception ex)
             {
-                if (ex is ValidationException || ex is ArgumentException)
-                {
-                    ModelState.AddModelError("Validation Error", ex.Message);
-                    return new ObjectResult(ProblemDetailsFactory.CreateValidationProblemDetails(HttpContext, ModelState));
-                }
-
                 _logger.LogError(ex, "Internal exception occurred during maskinportenschema delegation");
                 return new ObjectResult(ProblemDetailsFactory.CreateProblemDetails(HttpContext));
             }
