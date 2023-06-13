@@ -40,7 +40,7 @@ namespace Altinn.Auth.AuditLog.Tests.Utils
             {
                 builder.ConfigureTestServices(services =>
                 {
-                    services.AddSingleton<IAuthenticationEventRepository, AuthenticationEventRepositoryMock>();
+                    services.AddSingleton<IAuthorizationEventRepository, AuthorizationEventRepositoryMock>();
                     services.AddSingleton<IAuthorizationEventService, AuthorizationEventService>();
 
                 });
