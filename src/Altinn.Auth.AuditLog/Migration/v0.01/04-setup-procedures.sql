@@ -34,7 +34,7 @@ VALUES (
 	_resource,
 	_instanceid,
 	_operation,
-	_timetotelete,
+	_timetodelete,
 	_ipadress,
 	_contextrequestjson
 )

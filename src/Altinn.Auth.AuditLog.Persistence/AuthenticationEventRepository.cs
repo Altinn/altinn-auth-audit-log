@@ -79,7 +79,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         {
             return new AuthenticationEvent
             {
-                TimeStamp = reader.GetFieldValue<DateTime>("timestamp"),
+                Created = reader.GetFieldValue<DateTime>("created"),
                 UserId = reader.GetFieldValue<string>("userid"),
                 SupplierId = reader.GetFieldValue<string>("supplierid"),
                 EventType = reader.GetFieldValue<string>("eventtype"),

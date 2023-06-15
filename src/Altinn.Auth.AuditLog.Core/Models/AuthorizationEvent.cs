@@ -15,7 +15,6 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// <summary>
         /// The userid for the user that requested authorization
         /// </summary>
-        [Required]
         public string SubjectUserId { get; set; }
 
         /// <summary>

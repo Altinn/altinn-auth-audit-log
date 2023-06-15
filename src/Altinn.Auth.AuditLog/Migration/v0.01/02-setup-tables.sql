@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS authz.eventlog
 	resource text,
 	instanceid text,
 	operation text,
-	TimeToDelete text,
-	IpAdress text,
+	timetodelete text,
+	ipadress text,
 	contextrequestjson jsonb
 )
 TABLESPACE pg_default;

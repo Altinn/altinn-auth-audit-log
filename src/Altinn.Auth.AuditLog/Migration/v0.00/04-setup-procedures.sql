@@ -1,6 +1,12 @@
 -- Procedure: create_authenticationevent
 CREATE OR REPLACE FUNCTION authentication.create_authenticationevent(
-	_authenticationeventjson jsonb)
+	_userid text,
+	_supplierid text,
+	_eventtype text,
+	_orgnumber text,
+	_authenticationmethod text,
+	_authenticationlevel text,
+	_sessionid text)
     RETURNS authentication.eventlog
     LANGUAGE 'sql'
     COST 100
@@ -8,13 +14,23 @@ CREATE OR REPLACE FUNCTION authentication.create_authenticationevent(
 AS $BODY$
 INSERT INTO authentication.eventlog(
 	created,
-	modified,
-	authenticationeventjson
+	userid,
+	supplierid,
+	eventtype,
+	orgnumber,
+	authenticationmethod,
+	authenticationlevel,
+	sessionid
 )
 VALUES (
 	Now(),
-	Now(),
-	_authenticationeventjson
+	_userid,
+	_supplierid,
+	_eventtype,
+	_orgnumber,
+	_authenticationmethod,
+	_authenticationlevel,
+	_sessionid
 )
 RETURNING *;
 $BODY$;
