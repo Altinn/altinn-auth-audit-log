@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<testsuites tests="1" failures="0" time="78.3524">
-<testsuite name="auth-audit-log-authenticationevent" tests="1" failures="0" time="78.3524" timestamp="2023-06-15T10:16:53.911Z">
-<testcase name="Create authentication event status is 201"/>
-</testsuite>
-</testsuites>
