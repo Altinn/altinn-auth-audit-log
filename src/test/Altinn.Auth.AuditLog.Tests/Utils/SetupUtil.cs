@@ -1,5 +1,5 @@
 ﻿using Altinn.Auth.AuditLog.Controllers;
-using Altinn.Auth.AuditLog.Core.Repositories;
+using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Core.Services;
 using Altinn.Auth.AuditLog.Core.Services.Interfaces;
 using Altinn.Auth.AuditLog.Persistence;
@@ -26,6 +26,22 @@ namespace Altinn.Auth.AuditLog.Tests.Utils
                 {
                     services.AddSingleton<IAuthenticationEventRepository, AuthenticationEventRepositoryMock>();
                     services.AddSingleton<IAuthenticationEventService, AuthenticationEventService>();
+
+                });
+            });
+            factory.Server.AllowSynchronousIO = true;
+            return factory.CreateClient();
+        }
+
+        public static HttpClient GetTestClient(
+            CustomWebApplicationFactory<AuthorizationEventController> customFactory)
+        {
+            WebApplicationFactory<AuthorizationEventController> factory = customFactory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.AddSingleton<IAuthorizationEventRepository, AuthorizationEventRepositoryMock>();
+                    services.AddSingleton<IAuthorizationEventService, AuthorizationEventService>();
 
                 });
             });

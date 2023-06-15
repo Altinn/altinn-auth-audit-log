@@ -10,12 +10,11 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// <summary>
         /// Date, time of the authentication event. Set by producer of logevents
         /// </summary>
-        public DateTime TimeStamp { get; set; }
+        public DateTime Created { get; set; }
 
         /// <summary>
         /// Id of the user that triggered that authentication event 
         /// </summary>
-        [Required]
         public string UserId { get; set; }
 
         /// <summary>

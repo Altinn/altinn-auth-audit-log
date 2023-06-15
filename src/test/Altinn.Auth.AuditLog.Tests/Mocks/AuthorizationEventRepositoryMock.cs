@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 
 namespace Altinn.Auth.AuditLog.Tests.Mocks
 {
-    public class AuthenticationEventRepositoryMock : IAuthenticationEventRepository
+    public class AuthorizationEventRepositoryMock : IAuthorizationEventRepository
     {
-        public Task<AuthenticationEvent> InsertAuthenticationEvent(AuthenticationEvent authenticationEvent)
+        public Task<AuthorizationEvent> InsertAuthorizationEvent(AuthorizationEvent authorizationEvent)
         {
-            return Task.FromResult(authenticationEvent);
+            return Task.FromResult(authorizationEvent);
         }
     }
 }

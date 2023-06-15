@@ -1,5 +1,5 @@
 using Altinn.Auth.AuditLog.Configuration;
-using Altinn.Auth.AuditLog.Core.Repositories;
+using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Core.Services;
 using Altinn.Auth.AuditLog.Core.Services.Interfaces;
 using Altinn.Auth.AuditLog.Filters;
@@ -72,5 +72,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
 {
     services.AddSingleton<IAuthenticationEventService, AuthenticationEventService>();
     services.AddSingleton<IAuthenticationEventRepository, AuthenticationEventRepository>();
+    services.AddSingleton<IAuthorizationEventService, AuthorizationEventService>();
+    services.AddSingleton<IAuthorizationEventRepository, AuthorizationEventRepository>();
     services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
 }
