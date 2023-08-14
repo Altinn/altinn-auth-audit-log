@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Auth.AuditLog.Persis
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Auth.AuditLog.Tests", "src\test\Altinn.Auth.AuditLog.Tests\Altinn.Auth.AuditLog.Tests.csproj", "{A0E15CA7-0D52-42BC-B6CD-722568D0ADD6}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Altinn.Auth.AuditLog.Functions", "src\Functions\Altinn.Auth.AuditLog.Functions\Altinn.Auth.AuditLog.Functions.csproj", "{D4E2AECD-FBED-4B25-967F-D6950ECC7533}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{A0E15CA7-0D52-42BC-B6CD-722568D0ADD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A0E15CA7-0D52-42BC-B6CD-722568D0ADD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A0E15CA7-0D52-42BC-B6CD-722568D0ADD6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4E2AECD-FBED-4B25-967F-D6950ECC7533}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4E2AECD-FBED-4B25-967F-D6950ECC7533}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4E2AECD-FBED-4B25-967F-D6950ECC7533}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4E2AECD-FBED-4B25-967F-D6950ECC7533}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
