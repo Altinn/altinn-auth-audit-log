@@ -1,6 +1,6 @@
 # Building the auditlog api
 FROM mcr.microsoft.com/dotnet/sdk:7.0-alpine AS build
-COPY src/Altinn.Auth.AuditLog ./Altinn.Auth.AuditLog
+COPY src .
 WORKDIR Altinn.Auth.AuditLog/
 RUN dotnet build Altinn.Auth.AuditLog.csproj -c Release -o /app_output
 RUN dotnet publish Altinn.Auth.AuditLog.csproj -c Release -o /app_output
