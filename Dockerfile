@@ -10,5 +10,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:7.0-alpine AS final
 EXPOSE 80
 WORKDIR /app
 COPY --from=build /app_output .
+COPY src/Altinn.Auth.AuditLog/Migration ./Migration
 
 ENTRYPOINT ["dotnet", "Altinn.Auth.AuditLog.dll"]
