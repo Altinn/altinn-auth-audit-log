@@ -31,3 +31,14 @@ Refer this page for more [documentation](https://docs.altinn.studio/technology/a
 ## Run Tests
 
 Each `.js` is an independent test script and has an example command with the parameters to be sent for the test script.
+
+## Run Tests Locally
+
+For example to run the authenticationevent tests against the local app, the following command can be run
+```cmd
+    k6 run src/tests/authenticationevent.js -e env=local
+```
+To acheive this, config.js must be configured with the baseurl
+```cmd
+    local: 'host.docker.internal:5166'
+```
