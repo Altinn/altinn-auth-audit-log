@@ -37,7 +37,7 @@ namespace Altinn.Auth.AuditLog.Persistence
                                     postgresSettings.Value.AuthAuditLogDbPwd);                                   
         }
 
-        public async Task<AuthenticationEvent> InsertAuthenticationEvent(AuthenticationEvent authenticationEvent)
+        public async Task InsertAuthenticationEvent(AuthenticationEvent authenticationEvent)
         {
             if (authenticationEvent == null) 
             {
@@ -53,20 +53,14 @@ namespace Altinn.Auth.AuditLog.Persistence
 
                 NpgsqlCommand pgcom = new NpgsqlCommand(insertAuthenticationEvent, conn);
                 pgcom.Parameters.AddWithValue("_userid", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.UserId);
-                pgcom.Parameters.AddWithValue("_supplierid", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.SupplierId);
-                pgcom.Parameters.AddWithValue("_eventtype", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.EventType);
-                pgcom.Parameters.AddWithValue("_orgnumber", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.OrgNumber);
-                pgcom.Parameters.AddWithValue("_authenticationmethod", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.AuthenticationMethod);
-                pgcom.Parameters.AddWithValue("_authenticationlevel", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.AuthenticationLevel);
-                pgcom.Parameters.AddWithValue("_sessionid", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.SessionId);
+                pgcom.Parameters.AddWithValue("_supplierid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.SupplierId) ? DBNull.Value : authenticationEvent.SupplierId);
+                pgcom.Parameters.AddWithValue("_eventtype", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.EventType) ? DBNull.Value : authenticationEvent.EventType);
+                pgcom.Parameters.AddWithValue("_orgnumber", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.OrgNumber) ? DBNull.Value : authenticationEvent.OrgNumber);
+                pgcom.Parameters.AddWithValue("_authenticationmethod", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.AuthenticationMethod) ? DBNull.Value : authenticationEvent.AuthenticationMethod);
+                pgcom.Parameters.AddWithValue("_authenticationlevel", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.AuthenticationLevel) ? DBNull.Value : authenticationEvent.AuthenticationLevel);
+                pgcom.Parameters.AddWithValue("_sessionid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.SessionId) ? DBNull.Value : authenticationEvent.SessionId);
 
-                using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();
-                if (reader.Read())
-                {
-                    return GetAuthenticationEvent(reader);
-                }
-
-                return null;
+                await pgcom.ExecuteReaderAsync();
             }
             catch (Exception e)
             {
@@ -79,8 +73,8 @@ namespace Altinn.Auth.AuditLog.Persistence
         {
             return new AuthenticationEvent
             {
-                Created = reader.GetFieldValue<DateTime>("created"),
-                UserId = reader.GetFieldValue<string>("userid"),
+                Created = reader.IsDBNull("created") ? DateTime.MinValue : reader.GetFieldValue<DateTime>("created"),
+                UserId = reader.IsDBNull("userid") ? null : reader.GetFieldValue<string>("userid"),
                 SupplierId = reader.GetFieldValue<string>("supplierid"),
                 EventType = reader.GetFieldValue<string>("eventtype"),
                 OrgNumber = reader.GetFieldValue<string>("orgnumber"),
