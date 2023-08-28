@@ -66,7 +66,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
 
             HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
 
-            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
 
         [Fact]

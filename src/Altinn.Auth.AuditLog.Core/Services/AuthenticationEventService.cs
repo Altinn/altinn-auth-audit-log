@@ -25,10 +25,9 @@ namespace Altinn.Auth.AuditLog.Core.Services
         }
 
         /// <inheritdoc/>
-        public async Task<AuthenticationEvent> CreateAuthenticationEvent(AuthenticationEvent authenticationEvent)
+        public async Task CreateAuthenticationEvent(AuthenticationEvent authenticationEvent)
         {
-            AuthenticationEvent authEvent = await _authenticationEventRepository.InsertAuthenticationEvent(authenticationEvent);
-            return authEvent;
+            await _authenticationEventRepository.InsertAuthenticationEvent(authenticationEvent);
         }
     }
 }

@@ -17,6 +17,6 @@ namespace Altinn.Auth.AuditLog.Core.Services.Interfaces
         /// </summary>
         /// <param name="authenticationEvent">the authentication event</param>
         /// <returns></returns>
-        public Task<AuthenticationEvent> CreateAuthenticationEvent(AuthenticationEvent authenticationEvent);
+        public Task CreateAuthenticationEvent(AuthenticationEvent authenticationEvent);
     }
 }
