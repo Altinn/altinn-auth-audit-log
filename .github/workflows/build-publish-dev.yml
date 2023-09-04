@@ -3,7 +3,9 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - 'src/Functions/**'
+      - "src/Functions/**"
+      - "src/test/k6/**"
+      - ".github/**"
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: altinn/altinn-auth-audit-log
