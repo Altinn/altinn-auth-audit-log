@@ -2,6 +2,8 @@ name: Build Push to ghcr
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'src/Functions/**'
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: altinn/altinn-auth-audit-log
