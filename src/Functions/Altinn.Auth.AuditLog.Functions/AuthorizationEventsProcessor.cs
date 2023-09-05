@@ -10,14 +10,11 @@ namespace Altinn.Auth.AuditLog.Functions
 {
     public class AuthorizationEventsProcessor
     {
-        private readonly ILogger<AuthorizationEventsProcessor> _logger;
         private readonly IAuditLogClient _auditLogClient;
 
         public AuthorizationEventsProcessor(
-            ILogger<AuthorizationEventsProcessor> logger,
             IAuditLogClient auditLogClient)
         {
-            _logger = logger;
             _auditLogClient = auditLogClient;
         }
 
@@ -31,7 +28,7 @@ namespace Altinn.Auth.AuditLog.Functions
             {
                 PropertyNameCaseInsensitive = true,
             };
-            AuthorizationEvent authorizationEvent = JsonSerializer.Deserialize<AuthorizationEvent>(item, options);
+            AuthorizationEvent? authorizationEvent = JsonSerializer.Deserialize<AuthorizationEvent>(item, options);
             await _auditLogClient.SaveAuthorizationEvent(authorizationEvent);
 
         }

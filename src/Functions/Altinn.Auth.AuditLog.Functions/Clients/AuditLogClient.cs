@@ -41,7 +41,7 @@ namespace Altinn.Auth.AuditLog.Functions.Clients
             if (!success)
             {
                 var msg = $"// SaveAuthenticationEvent with id {authEvent.Created} failed with status code {statusCode}";
-                _logger.LogError(msg);
+                _logger.LogError("SaveAuthenticationEvent with id {authEvent.Created} failed with status code {statusCode}", authEvent.Created, statusCode);
                 throw new HttpRequestException(msg);
             }
         }
@@ -54,15 +54,15 @@ namespace Altinn.Auth.AuditLog.Functions.Clients
 
             if (!success)
             {
-                var msg = $"// SaveAuthorizationEvent with id {authorizationEvent.Resource} failed with status code {statusCode}";
-                _logger.LogError(msg);
+                string msg = $"// SaveAuthorizationEvent with id {authorizationEvent.Resource} failed with status code {statusCode}";
+                _logger.LogError("SaveAuthorizationEvent with id {authorizationEvent.Resource} failed with status code {statusCode}", authorizationEvent.Resource, statusCode);
                 throw new HttpRequestException(msg);
             }
         }
 
         private async Task<(bool Success, HttpStatusCode StatusCode)> PostAuthEventToEndpoint(AuthenticationEvent? authEvent, AuthorizationEvent? authorizationEvent, string endpoint)
         {
-            StringContent requestBody = null;
+            StringContent? requestBody = null;
             if (authEvent != null)
             {
                 requestBody = new StringContent(JsonSerializer.Serialize(authEvent), Encoding.UTF8, "application/json");
