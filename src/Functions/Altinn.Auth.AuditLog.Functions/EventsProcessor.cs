@@ -21,7 +21,7 @@ namespace Altinn.Auth.AuditLog.Functions
         }
 
         /// <summary>
-        /// Reads cloud event from eventlog queue and download instance and data for that given event and store it to configured azure storage
+        /// Reads cloud event from eventlog queue and post it to auditlog api
         /// </summary>
         [Function(nameof(EventsProcessor))]
         public async Task Run([Microsoft.Azure.Functions.Worker.QueueTrigger("eventlog", Connection = "QueueStorage")] string item, FunctionContext executionContext)
