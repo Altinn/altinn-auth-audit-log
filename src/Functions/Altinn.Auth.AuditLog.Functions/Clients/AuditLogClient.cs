@@ -19,11 +19,11 @@ namespace Altinn.Auth.AuditLog.Functions.Clients
     /// </summary>
     public class AuditLogClient : IAuditLogClient
     {
-        private readonly ILogger<AuditLogClient> _logger;
+        private readonly ILogger<IAuditLogClient> _logger;
         private readonly HttpClient _client;
 
         public AuditLogClient(
-            ILogger<AuditLogClient> logger, 
+            ILogger<IAuditLogClient> logger, 
             HttpClient client,
             IOptions<PlatformSettings> platformSettings)
         {
@@ -40,8 +40,8 @@ namespace Altinn.Auth.AuditLog.Functions.Clients
 
             if (!success)
             {
-                var msg = $"// SaveAuthenticationEvent with id {authEvent.Created} failed with status code {statusCode}";
-                _logger.LogError("SaveAuthenticationEvent with id {authEvent.Created} failed with status code {statusCode}", authEvent.Created, statusCode);
+                var msg = $"// SaveAuthenticationEvent failed with status code {statusCode}";
+                _logger.LogError("SaveAuthenticationEvent failed with status code {statusCode}", statusCode);
                 throw new HttpRequestException(msg);
             }
         }
@@ -54,8 +54,8 @@ namespace Altinn.Auth.AuditLog.Functions.Clients
 
             if (!success)
             {
-                string msg = $"// SaveAuthorizationEvent with id {authorizationEvent.Resource} failed with status code {statusCode}";
-                _logger.LogError("SaveAuthorizationEvent with id {authorizationEvent.Resource} failed with status code {statusCode}", authorizationEvent.Resource, statusCode);
+                string msg = $"SaveAuthorizationEvent failed with status code {statusCode}";
+                _logger.LogError("SaveAuthorizationEvent failed with status code {statusCode}", statusCode);
                 throw new HttpRequestException(msg);
             }
         }
