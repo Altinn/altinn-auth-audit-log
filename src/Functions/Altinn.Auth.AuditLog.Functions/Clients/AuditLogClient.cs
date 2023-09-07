@@ -19,11 +19,11 @@ namespace Altinn.Auth.AuditLog.Functions.Clients
     /// </summary>
     public class AuditLogClient : IAuditLogClient
     {
-        private readonly ILogger<AuditLogClient> _logger;
+        private readonly ILogger<IAuditLogClient> _logger;
         private readonly HttpClient _client;
 
         public AuditLogClient(
-            ILogger<AuditLogClient> logger, 
+            ILogger<IAuditLogClient> logger, 
             HttpClient client,
             IOptions<PlatformSettings> platformSettings)
         {
@@ -36,19 +36,41 @@ namespace Altinn.Auth.AuditLog.Functions.Clients
         public async Task SaveAuthenticationEvent(AuthenticationEvent authEvent)
         {
             string endpointUrl = "auditlog/api/v1/authenticationevent";
-            var (success, statusCode) = await PostAuthEventToEndpoint(authEvent, endpointUrl);
+            var (success, statusCode) = await PostAuthEventToEndpoint(authEvent, null, endpointUrl);
 
             if (!success)
             {
-                var msg = $"// SaveAuthenticationEvent with id {authEvent.Created} failed with status code {statusCode}";
-                _logger.LogError(msg);
+                var msg = $"// SaveAuthenticationEvent failed with status code {statusCode}";
+                _logger.LogError("SaveAuthenticationEvent failed with status code {statusCode}", statusCode);
                 throw new HttpRequestException(msg);
             }
         }
 
-        private async Task<(bool Success, HttpStatusCode StatusCode)> PostAuthEventToEndpoint(AuthenticationEvent authEvent, string endpoint)
+        /// <inheritdoc/>
+        public async Task SaveAuthorizationEvent(AuthorizationEvent authorizationEvent)
         {
-            StringContent requestBody = new StringContent(JsonSerializer.Serialize(authEvent), Encoding.UTF8, "application/json");
+            string endpointUrl = "auditlog/api/v1/authorizationevent";
+            var (success, statusCode) = await PostAuthEventToEndpoint(null, authorizationEvent, endpointUrl);
+
+            if (!success)
+            {
+                string msg = $"SaveAuthorizationEvent failed with status code {statusCode}";
+                _logger.LogError("SaveAuthorizationEvent failed with status code {statusCode}", statusCode);
+                throw new HttpRequestException(msg);
+            }
+        }
+
+        private async Task<(bool Success, HttpStatusCode StatusCode)> PostAuthEventToEndpoint(AuthenticationEvent? authEvent, AuthorizationEvent? authorizationEvent, string endpoint)
+        {
+            StringContent? requestBody = null;
+            if (authEvent != null)
+            {
+                requestBody = new StringContent(JsonSerializer.Serialize(authEvent), Encoding.UTF8, "application/json");
+            }
+            else if(authorizationEvent != null)
+            {
+                requestBody = new StringContent(JsonSerializer.Serialize(authorizationEvent), Encoding.UTF8, "application/json");
+            }
 
             HttpResponseMessage response = await _client.PostAsync(endpoint, requestBody);
             if (!response.IsSuccessStatusCode)
