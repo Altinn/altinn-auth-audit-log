@@ -144,7 +144,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
                   _platformSettings);
         }
 
-        private AuthorizationEvent GetAuthorizationEvent()
+        private static AuthorizationEvent GetAuthorizationEvent()
         {
             Models.Attribute userAttribute = new Models.Attribute()
             {

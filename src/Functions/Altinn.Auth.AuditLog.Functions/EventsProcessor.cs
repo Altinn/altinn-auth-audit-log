@@ -13,10 +13,10 @@ namespace Altinn.Auth.AuditLog.Functions
         private readonly ILogger _logger;
         private readonly IAuditLogClient _auditLogClient;
 
-        public EventsProcessor(ILoggerFactory loggerFactory,
+        public EventsProcessor(ILogger<EventsProcessor> logger,
             IAuditLogClient auditLogClient)
         {
-            _logger = loggerFactory.CreateLogger<EventsProcessor>();
+            _logger = logger;
             _auditLogClient = auditLogClient;
         }
 
