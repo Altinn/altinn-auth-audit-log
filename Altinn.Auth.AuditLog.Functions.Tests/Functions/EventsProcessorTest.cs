@@ -26,7 +26,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Functions
             AuthenticationEvent expectedAuthenticationEvent = new AuthenticationEvent()
             {
                 UserId = "20000003",
-                Created = DateTime.Parse("2023-09-07T04:24:43.971899Z"),
+                Created = DateTimeOffset.Parse("2023-09-07T06:24:43.971899Z").UtcDateTime,
                 AuthenticationMethod = "BankId",
                 EventType = "LoggedIn",
                 SessionId = "83343b4c-865d-4e6c-888d-33bc7533ea2d",
