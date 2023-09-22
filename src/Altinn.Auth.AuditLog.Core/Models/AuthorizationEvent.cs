@@ -18,6 +18,16 @@ namespace Altinn.Auth.AuditLog.Core.Models
         public string SubjectUserId { get; set; }
 
         /// <summary>
+        /// The org code for the org that requested authorization
+        /// </summary>
+        public string SubjectOrgCode { get; set; }
+
+        /// <summary>
+        /// The org number for the org that requested authorization
+        /// </summary>
+        public string SubjectOrgNumber { get; set; }
+
+        /// <summary>
         /// The partyid for the user that requested authorization
         /// </summary>
         public string? SubjectParty { get; set; }
@@ -55,6 +65,6 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// <summary>
         /// The whole context request
         /// </summary>
-        public ContextRequest ContextRequestJson { get; set; }
+        public string ContextRequestJson { get; set; }
     }
 }

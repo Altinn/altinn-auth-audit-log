@@ -173,7 +173,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
                 Operation = "read",
                 TimeToDelete = "",
                 IpAdress = "192.0.2.1",
-                ContextRequestJson = contextRequest
+                ContextRequestJson = JsonSerializer.Serialize(contextRequest)
 
             };
 

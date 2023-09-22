@@ -1,6 +1,8 @@
 -- Procedure: create_authorizationevent
 CREATE OR REPLACE FUNCTION authz.create_authorizationevent(
 	_subjectuserid text,
+	_subjectorgcode text,
+	_subjectorgnumber text,
 	_subjectparty text,
 	_resourcepartyid text,
 	_resource text,
@@ -17,6 +19,8 @@ AS $BODY$
 INSERT INTO authz.eventlog(
 	created,
 	subjectuserid,
+	subjectorgcode,
+	subjectorgnumber,
 	subjectparty,
 	resourcepartyid,
 	resource,
@@ -29,6 +33,8 @@ INSERT INTO authz.eventlog(
 VALUES (
 	Now(),
 	_subjectuserid,
+	_subjectorgcode,
+	_subjectorgnumber,
 	_subjectparty,
 	_resourcepartyid,
 	_resource,

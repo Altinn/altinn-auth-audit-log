@@ -12,6 +12,6 @@ namespace Altinn.Auth.AuditLog.Core.Repositories.Interfaces
     /// </summary>
     public interface IAuthorizationEventRepository
     {
-        Task<AuthorizationEvent> InsertAuthorizationEvent(AuthorizationEvent authorizationEvent);
+        Task InsertAuthorizationEvent(AuthorizationEvent authorizationEvent);
     }
 }

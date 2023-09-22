@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS authz.eventlog
 	identifier bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	created timestamp with time zone NOT NULL,
 	subjectuserid text,
+	subjectorgcode text,
+	subjectorgnumber text,
 	subjectparty text,
 	resourcepartyid text,
 	resource text,
