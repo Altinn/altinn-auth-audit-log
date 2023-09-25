@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Altinn.Auth.AuditLog.Core.Models
 {
     /// <summary>
     /// This model describes an authorization event. An authorization event is an action triggered when a user requests access to an operation
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class AuthorizationEvent
     {
         /// <summary>

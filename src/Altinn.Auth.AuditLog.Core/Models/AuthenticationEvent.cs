@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Altinn.Auth.AuditLog.Core.Models
 {
     /// <summary>
     /// This model describes an authentication event. An authentication event is an action triggered when a user authenticates to altinn
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class AuthenticationEvent
     {
         /// <summary>
