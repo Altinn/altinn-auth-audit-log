@@ -5,6 +5,7 @@ namespace Altinn.Auth.AuditLog.Functions.Models
     /// <summary>
     /// This model describes an authorization event. An authorization event is an action triggered when a user requests access to an operation
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class AuthorizationEvent
     {
         /// <summary>
