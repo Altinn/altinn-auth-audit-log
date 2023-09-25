@@ -63,8 +63,13 @@ namespace Altinn.Auth.AuditLog.Functions.Models
         public string IpAdress { get; set; }
 
         /// <summary>
-        /// The whole context request
+        /// The enriched context request
         /// </summary>
         public string ContextRequestJson { get; set; }
+
+        /// <summary>
+        /// Decision for the authorization request
+        /// </summary>
+        public string Decision { get; set; }
     }
 }

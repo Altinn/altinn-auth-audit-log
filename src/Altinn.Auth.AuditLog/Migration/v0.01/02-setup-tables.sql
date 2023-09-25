@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS authz.eventlog
 	operation text,
 	timetodelete text,
 	ipadress text,
-	contextrequestjson jsonb
+	contextrequestjson jsonb,
+	decision text
 )
 TABLESPACE pg_default;
 

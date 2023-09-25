@@ -21,7 +21,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         private readonly ILogger _logger;
         private readonly string _connectionString;
 
-        private readonly string insertAuthorizationEvent = "select * from authz.create_authorizationevent(@_subjectuserid,@_subjectorgcode,@_subjectorgnumber,@_subjectparty,@_resourcepartyid,@_resource,@_instanceid,@_operation,@_timetodelete,@_ipadress,@_contextrequestjson)";
+        private readonly string insertAuthorizationEvent = "select * from authz.create_authorizationevent(@_subjectuserid,@_subjectorgcode,@_subjectorgnumber,@_subjectparty,@_resourcepartyid,@_resource,@_instanceid,@_operation,@_timetodelete,@_ipadress,@_contextrequestjson,@_decision)";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthorizationEventRepository"/> class
@@ -62,6 +62,7 @@ namespace Altinn.Auth.AuditLog.Persistence
                 pgcom.Parameters.AddWithValue("_timetodelete", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.TimeToDelete) ? DBNull.Value : authorizationEvent.TimeToDelete);
                 pgcom.Parameters.AddWithValue("_ipadress", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.IpAdress) ? DBNull.Value : authorizationEvent.IpAdress);
                 pgcom.Parameters.AddWithValue("_contextrequestjson", NpgsqlTypes.NpgsqlDbType.Jsonb, authorizationEvent.ContextRequestJson);
+                pgcom.Parameters.AddWithValue("_decision", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.Decision) ? DBNull.Value : authorizationEvent.Decision);
 
                 using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();                
             }

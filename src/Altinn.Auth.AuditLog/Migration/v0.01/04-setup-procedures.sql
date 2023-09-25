@@ -10,7 +10,8 @@ CREATE OR REPLACE FUNCTION authz.create_authorizationevent(
 	_operation text,
 	_timetodelete text,
 	_ipadress text,
-	_contextrequestjson jsonb)
+	_contextrequestjson jsonb,
+	_decision text)
     RETURNS authz.eventlog
     LANGUAGE 'sql'
     COST 100
@@ -28,7 +29,8 @@ INSERT INTO authz.eventlog(
 	operation,
 	timetodelete,
 	ipadress,
-	contextrequestjson
+	contextrequestjson,
+	decision
 )
 VALUES (
 	Now(),
@@ -42,7 +44,8 @@ VALUES (
 	_operation,
 	_timetodelete,
 	_ipadress,
-	_contextrequestjson
+	_contextrequestjson,
+	_decision
 )
 RETURNING *;
 $BODY$;
