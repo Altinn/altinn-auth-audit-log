@@ -30,7 +30,6 @@ namespace Altinn.Auth.AuditLog.Functions
             };
             AuthorizationEvent? authorizationEvent = JsonSerializer.Deserialize<AuthorizationEvent>(item, options);
             await _auditLogClient.SaveAuthorizationEvent(authorizationEvent);
-
         }
     }
 }

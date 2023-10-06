@@ -1,15 +1,16 @@
 -- Procedure: create_authorizationevent
 CREATE OR REPLACE FUNCTION authz.create_authorizationevent(
-	_subjectuserid text,
+	_created timestamp,
+	_subjectuserid INTEGER,
 	_subjectorgcode text,
-	_subjectorgnumber text,
-	_subjectparty text,
-	_resourcepartyid text,
+	_subjectorgnumber INTEGER,
+	_subjectparty INTEGER,
+	_resourcepartyid INTEGER,
 	_resource text,
 	_instanceid text,
 	_operation text,
-	_timetodelete text,
-	_ipadress text,
+	_timetodelete timestamp,
+	_ipaddress text,
 	_contextrequestjson jsonb,
 	_decision text)
     RETURNS authz.eventlog
@@ -28,12 +29,12 @@ INSERT INTO authz.eventlog(
 	instanceid,
 	operation,
 	timetodelete,
-	ipadress,
+	ipaddress,
 	contextrequestjson,
 	decision
 )
 VALUES (
-	Now(),
+	_created,
 	_subjectuserid,
 	_subjectorgcode,
 	_subjectorgnumber,
@@ -43,7 +44,7 @@ VALUES (
 	_instanceid,
 	_operation,
 	_timetodelete,
-	_ipadress,
+	_ipaddress,
 	_contextrequestjson,
 	_decision
 )

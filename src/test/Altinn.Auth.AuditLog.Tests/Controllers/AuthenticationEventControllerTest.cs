@@ -46,12 +46,12 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
         {
             AuthenticationEvent authenticationEvent = new AuthenticationEvent()
             {
-                UserId = "20000003",
-                Created = DateTime.UtcNow,
+                UserId = 20000003,
+                Created = new DateTime(2018, 05, 15, 02, 05, 00),
                 AuthenticationMethod = "BankId",
                 EventType = "LoggedIn",
-                SessionId = "83343b4c-865d-4e6c-888d-33bc7533ea2d",
                 AuthenticationLevel = "4",
+                TimeToDelete = new DateTime(2021, 05, 15, 02, 05, 00)
             };
 
             string requestUri = "auditlog/api/v1/authenticationevent/";

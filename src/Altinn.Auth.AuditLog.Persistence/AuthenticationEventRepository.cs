@@ -20,7 +20,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         private readonly ILogger _logger;
         private readonly string _connectionString;
 
-        private readonly string insertAuthenticationEvent = "select * from authentication.create_authenticationevent(@_userid,@_supplierid,@_eventtype,@_orgnumber,@_authenticationmethod,@_authenticationlevel,@_sessionid)";
+        private readonly string insertAuthenticationEvent = "select * from authentication.create_authenticationevent(@_created,@_userid,@_supplierid,@_eventtype,@_orgnumber,@_authenticationmethod,@_authenticationlevel,@_ipaddress,@_isauthenticated,@_timetodelete)";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthenticationEventRepository"/> class
@@ -52,13 +52,17 @@ namespace Altinn.Auth.AuditLog.Persistence
                 await conn.OpenAsync();
 
                 NpgsqlCommand pgcom = new NpgsqlCommand(insertAuthenticationEvent, conn);
-                pgcom.Parameters.AddWithValue("_userid", NpgsqlTypes.NpgsqlDbType.Text, authenticationEvent.UserId);
+                pgcom.Parameters.AddWithValue("_created", NpgsqlTypes.NpgsqlDbType.Timestamp, authenticationEvent.Created == DateTime.MinValue ? DBNull.Value : authenticationEvent.Created);
+                pgcom.Parameters.AddWithValue("_userid", NpgsqlTypes.NpgsqlDbType.Integer, (authenticationEvent.UserId == null) ? DBNull.Value : authenticationEvent.UserId);
                 pgcom.Parameters.AddWithValue("_supplierid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.SupplierId) ? DBNull.Value : authenticationEvent.SupplierId);
                 pgcom.Parameters.AddWithValue("_eventtype", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.EventType) ? DBNull.Value : authenticationEvent.EventType);
-                pgcom.Parameters.AddWithValue("_orgnumber", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.OrgNumber) ? DBNull.Value : authenticationEvent.OrgNumber);
+                pgcom.Parameters.AddWithValue("_orgnumber", NpgsqlTypes.NpgsqlDbType.Integer, (authenticationEvent.OrgNumber == null) ? DBNull.Value : authenticationEvent.OrgNumber);
                 pgcom.Parameters.AddWithValue("_authenticationmethod", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.AuthenticationMethod) ? DBNull.Value : authenticationEvent.AuthenticationMethod);
                 pgcom.Parameters.AddWithValue("_authenticationlevel", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.AuthenticationLevel) ? DBNull.Value : authenticationEvent.AuthenticationLevel);
-                pgcom.Parameters.AddWithValue("_sessionid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.SessionId) ? DBNull.Value : authenticationEvent.SessionId);
+                pgcom.Parameters.AddWithValue("_ipaddress", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.IpAddress) ? DBNull.Value : authenticationEvent.IpAddress);                
+                pgcom.Parameters.AddWithValue("_isauthenticated", NpgsqlTypes.NpgsqlDbType.Boolean, authenticationEvent.IsAuthenticated);
+                pgcom.Parameters.AddWithValue("_timetodelete", NpgsqlTypes.NpgsqlDbType.Timestamp, authenticationEvent.TimeToDelete == DateTime.MinValue ? DBNull.Value : authenticationEvent.TimeToDelete);
+
 
                 await pgcom.ExecuteReaderAsync();
             }
@@ -67,21 +71,6 @@ namespace Altinn.Auth.AuditLog.Persistence
                 _logger.LogError(e, "AuditLog // AuditLogMetadataRepository // InsertAuthenticationEvent // Exception");
                 throw;
             }
-        }
-
-        private static AuthenticationEvent GetAuthenticationEvent(NpgsqlDataReader reader)
-        {
-            return new AuthenticationEvent
-            {
-                Created = reader.IsDBNull("created") ? DateTime.MinValue : reader.GetFieldValue<DateTime>("created"),
-                UserId = reader.IsDBNull("userid") ? null : reader.GetFieldValue<string>("userid"),
-                SupplierId = reader.GetFieldValue<string>("supplierid"),
-                EventType = reader.GetFieldValue<string>("eventtype"),
-                OrgNumber = reader.GetFieldValue<string>("orgnumber"),
-                AuthenticationMethod = reader.GetFieldValue<string>("authenticationmethod"),
-                AuthenticationLevel = reader.GetFieldValue<string>("authenticationlevel"),
-                SessionId = reader.GetFieldValue<string>("sessionid")
-            };
-        }
+        }        
     }
 }

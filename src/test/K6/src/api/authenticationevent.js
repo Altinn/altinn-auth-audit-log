@@ -16,7 +16,6 @@ export function createauthenticationevent() {
       eventType: 'login',
       authenticationMethod: 'altinnpin',
       authenticationLevel: '2',
-      sessionId: '24f6554b-6e23-4132-9a72-0ac3c91478d3',
     },
   ];
   var bodystring = JSON.stringify(body);
