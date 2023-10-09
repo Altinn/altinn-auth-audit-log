@@ -1,31 +1,43 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Altinn.Auth.AuditLog.Functions.Models
 {
     /// <summary>
     /// This model describes an authorization event. An authorization event is an action triggered when a user requests access to an operation
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class AuthorizationEvent
     {
         /// <summary>
         /// Date, time of the authorization event. Set by producer of logevents
         /// </summary>
-        public DateTime TimeStamp { get; set; }
+        public DateTime Created { get; set; }
 
         /// <summary>
         /// The userid for the user that requested authorization
         /// </summary>
-        public string SubjectUserId { get; set; }
+        public int? SubjectUserId { get; set; }
+
+        /// <summary>
+        /// The org code for the org that requested authorization
+        /// </summary>
+        public string SubjectOrgCode { get; set; }
+
+        /// <summary>
+        /// The org number for the org that requested authorization
+        /// </summary>
+        public int? SubjectOrgNumber { get; set; }
 
         /// <summary>
         /// The partyid for the user that requested authorization
         /// </summary>
-        public string? SubjectParty { get; set; }
+        public int? SubjectParty { get; set; }
 
         /// <summary>
         /// The partyId for resource owner when applicable
         /// </summary>
-        public string ResourcePartyId { get; set; }
+        public int? ResourcePartyId { get; set; }
 
         /// <summary>
         /// The Main resource Id (app, external resource +)
@@ -45,7 +57,7 @@ namespace Altinn.Auth.AuditLog.Functions.Models
         /// <summary>
         /// Duration of log retention
         /// </summary>
-        public string TimeToDelete { get; set; }
+        public DateTime TimeToDelete { get; set; }
 
         /// <summary>
         /// The Ip adress of the calling party
@@ -53,8 +65,13 @@ namespace Altinn.Auth.AuditLog.Functions.Models
         public string IpAdress { get; set; }
 
         /// <summary>
-        /// The whole context request
+        /// The enriched context request
         /// </summary>
-        public ContextRequest ContextRequestJson { get; set; }
+        public string ContextRequestJson { get; set; }
+
+        /// <summary>
+        /// Decision for the authorization request
+        /// </summary>
+        public string Decision { get; set; }
     }
 }

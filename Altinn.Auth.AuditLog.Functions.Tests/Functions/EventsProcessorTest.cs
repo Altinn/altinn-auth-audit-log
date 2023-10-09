@@ -21,15 +21,15 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Functions
         {
 
             // Arrange
-            string serializedAuthenticationEvent = "{\"Created\":\"2023-09-07T06:24:43.971899Z\",\"UserId\":\"20000003\",\"SupplierId\":null,\"EventType\":\"LoggedIn\",\"OrgNumber\":null,\"AuthenticationMethod\":\"BankId\",\"AuthenticationLevel\":\"4\",\"SessionId\":\"83343b4c-865d-4e6c-888d-33bc7533ea2d\"}\r\n";
+            string serializedAuthenticationEvent = "{\"Created\":\"2023-09-07T06:24:43.971899Z\",\"UserId\":20000003,\"EventType\":\"LoggedIn\",\"AuthenticationMethod\":\"BankId\",\"AuthenticationLevel\":\"4\"}\r\n";
 
             AuthenticationEvent expectedAuthenticationEvent = new AuthenticationEvent()
             {
-                UserId = "20000003",
+                UserId = 20000003,
                 Created = DateTimeOffset.Parse("2023-09-07T06:24:43.971899Z").UtcDateTime,
                 AuthenticationMethod = "BankId",
                 EventType = "LoggedIn",
-                SessionId = "83343b4c-865d-4e6c-888d-33bc7533ea2d",
+                IpAdress = "192.168.1.0.1",
                 AuthenticationLevel = "4",
             };
 
@@ -49,7 +49,6 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Functions
 
         private static bool AssertExpectedAuthenticationEvent(AuthenticationEvent actualAuthenticationEvent, AuthenticationEvent expectedAuthenticationEvent)
         {
-            Assert.Equal(expectedAuthenticationEvent.SessionId, actualAuthenticationEvent.SessionId);
             Assert.Equal(expectedAuthenticationEvent.AuthenticationLevel, actualAuthenticationEvent.AuthenticationLevel);
             Assert.Equal(expectedAuthenticationEvent.AuthenticationMethod, actualAuthenticationEvent.AuthenticationMethod);
             Assert.Equal(expectedAuthenticationEvent.Created, actualAuthenticationEvent.Created);

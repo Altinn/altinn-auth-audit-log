@@ -1,12 +1,15 @@
 -- Procedure: create_authenticationevent
 CREATE OR REPLACE FUNCTION authentication.create_authenticationevent(
-	_userid text,
+	_created timestamp,
+	_userid integer,
 	_supplierid text,
 	_eventtype text,
-	_orgnumber text,
+	_orgnumber integer,
 	_authenticationmethod text,
 	_authenticationlevel text,
-	_sessionid text)
+	_ipaddress text,
+	_isauthenticated boolean,
+	_timetodelete timestamp)
     RETURNS authentication.eventlog
     LANGUAGE 'sql'
     COST 100
@@ -20,17 +23,21 @@ INSERT INTO authentication.eventlog(
 	orgnumber,
 	authenticationmethod,
 	authenticationlevel,
-	sessionid
+	ipaddress,
+	isauthenticated,
+	timetodelete
 )
 VALUES (
-	Now(),
+	_created,
 	_userid,
 	_supplierid,
 	_eventtype,
 	_orgnumber,
 	_authenticationmethod,
 	_authenticationlevel,
-	_sessionid
+	_ipaddress,
+	_isauthenticated,
+	_timetodelete
 )
 RETURNING *;
 $BODY$;

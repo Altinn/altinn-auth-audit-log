@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Altinn.Auth.AuditLog.Core.Models
 {
     /// <summary>
     /// This model describes an authentication event. An authentication event is an action triggered when a user authenticates to altinn
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class AuthenticationEvent
     {
         /// <summary>
@@ -15,7 +17,7 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// <summary>
         /// Id of the user that triggered that authentication event 
         /// </summary>
-        public string UserId { get; set; }
+        public int? UserId { get; set; }
 
         /// <summary>
         /// Relevant if the event is triggered by enterprise user
@@ -30,7 +32,7 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// <summary>
         /// Relevant if the event is triggered by enterprise user?
         /// </summary>
-        public string? OrgNumber { get; set; }
+        public int? OrgNumber { get; set; }
 
         /// <summary>
         /// The type of authentication used by the user (BankId etc)
@@ -45,6 +47,16 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// <summary>
         /// The session id
         /// </summary>
-        public string SessionId { get; set; }
+        public string IpAddress { get; set; }
+
+        /// <summary>
+        /// The authentication result
+        /// </summary>
+        public bool IsAuthenticated { get; set; }
+
+        /// <summary>
+        /// Date, time of when the authentication event can be deleted
+        /// </summary>
+        public DateTime TimeToDelete { get; set; }
     }
 }
