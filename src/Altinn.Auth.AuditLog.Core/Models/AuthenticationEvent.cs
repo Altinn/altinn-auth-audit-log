@@ -1,5 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Altinn.Auth.AuditLog.Core.Enum;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Security;
 
 namespace Altinn.Auth.AuditLog.Core.Models
 {
@@ -9,6 +11,11 @@ namespace Altinn.Auth.AuditLog.Core.Models
     [ExcludeFromCodeCoverage]
     public class AuthenticationEvent
     {
+        /// <summary>
+        /// Session Id of the authentication request
+        /// </summary>
+        public string? SessionId { get; set; }
+
         /// <summary>
         /// Date, time of the authentication event. Set by producer of logevents
         /// </summary>
@@ -25,38 +32,33 @@ namespace Altinn.Auth.AuditLog.Core.Models
         public string? SupplierId { get; set; }
 
         /// <summary>
-        /// The type of authentication event
-        /// </summary>
-        public string EventType { get; set; }
-
-        /// <summary>
         /// Relevant if the event is triggered by enterprise user?
         /// </summary>
         public int? OrgNumber { get; set; }
 
         /// <summary>
+        /// The type of authentication event
+        /// </summary>
+        public AuthenticationEventType EventType { get; set; }
+
+        /// <summary>
         /// The type of authentication used by the user (BankId etc)
         /// </summary>
-        public string AuthenticationMethod { get; set; }
+        public AuthenticationMethod? AuthenticationMethod { get; set; }
 
         /// <summary>
         /// The level of authentication used by the user (1, 2,  etc)
         /// </summary>
-        public string AuthenticationLevel { get; set; }
+        public SecurityLevel? AuthenticationLevel { get; set; }
 
         /// <summary>
         /// The session id
         /// </summary>
-        public string IpAddress { get; set; }
+        public string? IpAddress { get; set; }
 
         /// <summary>
         /// The authentication result
         /// </summary>
         public bool IsAuthenticated { get; set; }
-
-        /// <summary>
-        /// Date, time of when the authentication event can be deleted
-        /// </summary>
-        public DateTime TimeToDelete { get; set; }
     }
 }

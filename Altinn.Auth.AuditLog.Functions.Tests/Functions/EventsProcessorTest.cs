@@ -1,4 +1,5 @@
 ﻿using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
+using Altinn.Auth.AuditLog.Functions.Enum;
 using Altinn.Auth.AuditLog.Functions.Models;
 using Azure.Messaging;
 using Microsoft.Extensions.Logging;
@@ -21,16 +22,15 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Functions
         {
 
             // Arrange
-            string serializedAuthenticationEvent = "{\"Created\":\"2023-09-07T06:24:43.971899Z\",\"UserId\":20000003,\"EventType\":\"LoggedIn\",\"AuthenticationMethod\":\"BankId\",\"AuthenticationLevel\":\"4\"}\r\n";
+            string serializedAuthenticationEvent = "{\"Created\":\"2023-09-07T06:24:43.971899Z\",\"UserId\":20000003,\"EventType\":\"Authenticate\",\"AuthenticationMethod\":\"BankId\",\"AuthenticationLevel\":\"VerySensitive\"}\r\n";
 
             AuthenticationEvent expectedAuthenticationEvent = new AuthenticationEvent()
             {
                 UserId = 20000003,
                 Created = DateTimeOffset.Parse("2023-09-07T06:24:43.971899Z").UtcDateTime,
-                AuthenticationMethod = "BankId",
-                EventType = "LoggedIn",
-                IpAdress = "192.168.1.0.1",
-                AuthenticationLevel = "4",
+                AuthenticationMethod = AuthenticationMethod.BankID,
+                EventType = AuthenticationEventType.Authenticate,
+                AuthenticationLevel = SecurityLevel.VerySensitive,
             };
 
         Mock<IAuditLogClient> clientMock = new();
@@ -56,6 +56,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Functions
             Assert.Equal(expectedAuthenticationEvent.OrgNumber, actualAuthenticationEvent.OrgNumber);
             Assert.Equal(expectedAuthenticationEvent.SupplierId, actualAuthenticationEvent.SupplierId);
             Assert.Equal(expectedAuthenticationEvent.UserId, actualAuthenticationEvent.UserId);
+            Assert.Equal(expectedAuthenticationEvent.IpAdress, actualAuthenticationEvent.IpAdress);
             return true;
         }
     }
