@@ -94,6 +94,9 @@ INSERT INTO authentication.authenticationmethod(
 INSERT INTO authentication.authenticationmethod(
 	authenticationmethodid, name, description)
 	VALUES (17, 'VirksomhetsBruker', 'VirksomhetsBruker');
+INSERT INTO authentication.authenticationmethod(
+	authenticationmethodid, name, description)
+	VALUES (18, 'TestID', 'TestID');
 
 
 

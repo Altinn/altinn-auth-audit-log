@@ -1,6 +1,6 @@
 // This file inhols baseURLs and endpoints for the APIs
 export var baseUrls = {
-  local: 'host.docker.internal:5166',
+  local: 'localhost:5166',
   at21: 'at21.altinn.cloud',
   at22: 'at22.altinn.cloud',
   at23: 'at23.altinn.cloud',

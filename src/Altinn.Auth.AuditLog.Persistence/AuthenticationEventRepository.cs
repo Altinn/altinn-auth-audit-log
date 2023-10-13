@@ -43,9 +43,7 @@ namespace Altinn.Auth.AuditLog.Persistence
             {
                 throw new ArgumentNullException(nameof(authenticationEvent));
             }
-
-            var json = System.Text.Json.JsonSerializer.Serialize(authenticationEvent, new System.Text.Json.JsonSerializerOptions() { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
-
+          
             try
             {
                 await using NpgsqlConnection conn = new NpgsqlConnection(_connectionString);
