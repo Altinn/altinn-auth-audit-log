@@ -5,6 +5,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Altinn.Auth.AuditLog.Functions.Models;
 using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
+using System.Text.Json.Serialization;
 
 namespace Altinn.Auth.AuditLog.Functions
 {
@@ -26,7 +27,9 @@ namespace Altinn.Auth.AuditLog.Functions
         [Function(nameof(EventsProcessor))]
         public async Task Run([Microsoft.Azure.Functions.Worker.QueueTrigger("eventlog", Connection = "QueueStorage")] string item, FunctionContext executionContext)
         {
-            AuthenticationEvent authEvent = System.Text.Json.JsonSerializer.Deserialize<AuthenticationEvent>(item);
+            var options = new JsonSerializerOptions();
+            options.Converters.Add(new JsonStringEnumConverter());
+            AuthenticationEvent authEvent = JsonSerializer.Deserialize<AuthenticationEvent>(item, options);
             await _auditLogClient.SaveAuthenticationEvent(authEvent);
 
         }
