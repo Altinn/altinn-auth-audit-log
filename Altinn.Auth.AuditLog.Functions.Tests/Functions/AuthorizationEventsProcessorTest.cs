@@ -47,7 +47,6 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Functions
             Assert.Equal(expectedAuthorizationEvent.Operation, actualAuthorizationEvent.Operation);
             Assert.Equal(expectedAuthorizationEvent.Resource, actualAuthorizationEvent.Resource);
             Assert.Equal(expectedAuthorizationEvent.IpAdress, actualAuthorizationEvent.IpAdress);
-            Assert.Equal(expectedAuthorizationEvent.TimeToDelete, actualAuthorizationEvent.TimeToDelete);
             Assert.Equal(expectedAuthorizationEvent.Created, actualAuthorizationEvent.Created);
             Assert.Equal(expectedAuthorizationEvent.ContextRequestJson, actualAuthorizationEvent.ContextRequestJson);            
             return true;

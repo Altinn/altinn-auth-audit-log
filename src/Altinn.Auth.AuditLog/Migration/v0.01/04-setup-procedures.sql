@@ -1,5 +1,6 @@
 -- Procedure: create_authorizationevent
 CREATE OR REPLACE FUNCTION authz.create_authorizationevent(
+	_sessionid text,
 	_created timestamp,
 	_subjectuserid INTEGER,
 	_subjectorgcode text,
@@ -9,16 +10,16 @@ CREATE OR REPLACE FUNCTION authz.create_authorizationevent(
 	_resource text,
 	_instanceid text,
 	_operation text,
-	_timetodelete timestamp,
 	_ipaddress text,
 	_contextrequestjson jsonb,
-	_decision text)
+	_decision integer)
     RETURNS authz.eventlog
     LANGUAGE 'sql'
     COST 100
     VOLATILE PARALLEL SAFE 
 AS $BODY$
 INSERT INTO authz.eventlog(
+	sessionid,
 	created,
 	subjectuserid,
 	subjectorgcode,
@@ -28,12 +29,12 @@ INSERT INTO authz.eventlog(
 	resource,
 	instanceid,
 	operation,
-	timetodelete,
 	ipaddress,
 	contextrequestjson,
 	decision
 )
 VALUES (
+	_sessionid,
 	_created,
 	_subjectuserid,
 	_subjectorgcode,
@@ -43,7 +44,6 @@ VALUES (
 	_resource,
 	_instanceid,
 	_operation,
-	_timetodelete,
 	_ipaddress,
 	_contextrequestjson,
 	_decision

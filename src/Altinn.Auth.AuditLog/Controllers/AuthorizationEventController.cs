@@ -42,7 +42,7 @@ namespace Altinn.Auth.AuditLog.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Internal exception occurred during maskinportenschema delegation");
+                _logger.LogError(ex, "Internal exception occurred during logging of authorization event");
                 return new ObjectResult(ProblemDetailsFactory.CreateProblemDetails(HttpContext));
             }
 
