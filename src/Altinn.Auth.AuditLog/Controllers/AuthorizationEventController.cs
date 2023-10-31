@@ -29,7 +29,7 @@ namespace Altinn.Auth.AuditLog.Controllers
         [Route("auditlog/api/v1/authorizationevent")]
         [Consumes("application/json")]
         [Produces("application/json")]
-        [ProducesResponseType(201)]
+        [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(500)]
         [ServiceFilter(typeof(ValidationFilterAttribute))]
