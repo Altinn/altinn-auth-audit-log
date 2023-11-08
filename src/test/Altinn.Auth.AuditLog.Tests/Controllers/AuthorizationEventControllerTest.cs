@@ -35,16 +35,18 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
         /// <param name="factory">CustomWebApplicationFactory</param>
         public AuthorizationEventControllerTest(CustomWebApplicationFactory<AuthorizationEventController> factory)
         {
-            _factory = factory;
-            _client = SetupUtil.GetTestClient(factory);
-            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _authorizationEventRepositoryMock = new Mock<IAuthorizationEventRepository>();
+            _factory = factory;         
         }
 
         [Fact]
         public async Task CreateAuthorizationEvent_Ok()
         {
             string requestUri = "auditlog/api/v1/authorizationevent/";
+            Mock<IAuthorizationEventRepository> authzEventRepository = new Mock<IAuthorizationEventRepository>();
+            authzEventRepository.Setup(q => q.InsertAuthorizationEvent(It.IsAny<AuthorizationEvent>())).Returns(Task.FromResult(GetAuthorizationEvent()));
+
+            _client = SetupUtil.GetTestClient(_factory, authzEventRepository.Object);
+            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
@@ -65,6 +67,11 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
             AuthorizationEvent authorizationEvent = null;
 
             string requestUri = "auditlog/api/v1/authorizationevent/";
+            Mock<IAuthorizationEventRepository> authzEventRepository = new Mock<IAuthorizationEventRepository>();
+            authzEventRepository.Setup(q => q.InsertAuthorizationEvent(It.IsAny<AuthorizationEvent>())).Returns(Task.FromResult(authorizationEvent));
+
+            _client = SetupUtil.GetTestClient(_factory, authzEventRepository.Object);
+            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
@@ -77,6 +84,28 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
             HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task CreateAuthorizationEvent_Exception()
+        {
+            string requestUri = "auditlog/api/v1/authorizationevent/";
+            Mock<IAuthorizationEventRepository> authzEventRepository = new Mock<IAuthorizationEventRepository>();
+            authzEventRepository.Setup(q => q.InsertAuthorizationEvent(It.IsAny<AuthorizationEvent>())).Throws<System.ArgumentException>();
+            _client = SetupUtil.GetTestClient(_factory, authzEventRepository.Object);
+            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(GetAuthorizationEvent()), Encoding.UTF8, "application/json")
+            };
+
+            httpRequestMessage.Headers.Add("Accept", "application/json");
+            httpRequestMessage.Headers.Add("ContentType", "application/json");
+
+            HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
+
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         }
 
         private AuthorizationEvent GetAuthorizationEvent()
