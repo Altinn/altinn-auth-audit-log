@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
 using Altinn.Auth.AuditLog.Functions.Models;
 using Azure.Storage.Queues.Models;
@@ -28,6 +29,7 @@ namespace Altinn.Auth.AuditLog.Functions
             {
                 PropertyNameCaseInsensitive = true,
             };
+            options.Converters.Add(new JsonStringEnumConverter());
             AuthorizationEvent? authorizationEvent = JsonSerializer.Deserialize<AuthorizationEvent>(item, options);
             await _auditLogClient.SaveAuthorizationEvent(authorizationEvent);
         }

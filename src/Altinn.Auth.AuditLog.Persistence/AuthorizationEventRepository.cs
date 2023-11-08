@@ -21,7 +21,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         private readonly ILogger _logger;
         private readonly string _connectionString;
 
-        private readonly string insertAuthorizationEvent = "select * from authz.create_authorizationevent(@_created,@_subjectuserid,@_subjectorgcode,@_subjectorgnumber,@_subjectparty,@_resourcepartyid,@_resource,@_instanceid,@_operation,@_timetodelete,@_ipadress,@_contextrequestjson,@_decision)";
+        private readonly string insertAuthorizationEvent = "select * from authz.create_authorizationevent(@_sessionid,@_created,@_subjectuserid,@_subjectorgcode,@_subjectorgnumber,@_subjectparty,@_resourcepartyid,@_resource,@_instanceid,@_operation,@_ipadress,@_contextrequestjson,@_decision)";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthorizationEventRepository"/> class
@@ -51,6 +51,7 @@ namespace Altinn.Auth.AuditLog.Persistence
                 await conn.OpenAsync();
 
                 NpgsqlCommand pgcom = new NpgsqlCommand(insertAuthorizationEvent, conn);
+                pgcom.Parameters.AddWithValue("_sessionid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.SessionId) ? DBNull.Value : authorizationEvent.SessionId);
                 pgcom.Parameters.AddWithValue("_created", NpgsqlTypes.NpgsqlDbType.Timestamp, authorizationEvent.Created == DateTime.MinValue ? DBNull.Value : authorizationEvent.Created);
                 pgcom.Parameters.AddWithValue("_subjectuserid", NpgsqlTypes.NpgsqlDbType.Integer, (authorizationEvent.SubjectUserId == null) ? DBNull.Value : authorizationEvent.SubjectUserId);
                 pgcom.Parameters.AddWithValue("_subjectorgcode", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.SubjectOrgCode) ? DBNull.Value : authorizationEvent.SubjectOrgCode);
@@ -60,10 +61,9 @@ namespace Altinn.Auth.AuditLog.Persistence
                 pgcom.Parameters.AddWithValue("_resource", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.Resource) ? DBNull.Value : authorizationEvent.Resource);
                 pgcom.Parameters.AddWithValue("_instanceid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.InstanceId) ? DBNull.Value : authorizationEvent.InstanceId);
                 pgcom.Parameters.AddWithValue("_operation", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.Operation) ? DBNull.Value : authorizationEvent.Operation);
-                pgcom.Parameters.AddWithValue("_timetodelete", NpgsqlTypes.NpgsqlDbType.Timestamp, authorizationEvent.TimeToDelete == DateTime.MinValue ? DBNull.Value : authorizationEvent.TimeToDelete);
                 pgcom.Parameters.AddWithValue("_ipadress", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.IpAdress) ? DBNull.Value : authorizationEvent.IpAdress);
                 pgcom.Parameters.AddWithValue("_contextrequestjson", NpgsqlTypes.NpgsqlDbType.Jsonb, authorizationEvent.ContextRequestJson);
-                pgcom.Parameters.AddWithValue("_decision", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.Decision) ? DBNull.Value : authorizationEvent.Decision);
+                pgcom.Parameters.AddWithValue("_decision", NpgsqlTypes.NpgsqlDbType.Integer, Convert.ToInt32(authorizationEvent.Decision));
 
                 using NpgsqlDataReader reader = await pgcom.ExecuteReaderAsync();                
             }

@@ -35,18 +35,18 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
         /// <param name="factory">CustomWebApplicationFactory</param>
         public AuthorizationEventControllerTest(CustomWebApplicationFactory<AuthorizationEventController> factory)
         {
-            _factory = factory;
-            _client = SetupUtil.GetTestClient(factory);
-            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _authorizationEventRepositoryMock = new Mock<IAuthorizationEventRepository>();
+            _factory = factory;         
         }
 
         [Fact]
         public async Task CreateAuthorizationEvent_Ok()
         {
-
-
             string requestUri = "auditlog/api/v1/authorizationevent/";
+            Mock<IAuthorizationEventRepository> authzEventRepository = new Mock<IAuthorizationEventRepository>();
+            authzEventRepository.Setup(q => q.InsertAuthorizationEvent(It.IsAny<AuthorizationEvent>())).Returns(Task.FromResult(GetAuthorizationEvent()));
+
+            _client = SetupUtil.GetTestClient(_factory, authzEventRepository.Object);
+            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
@@ -67,6 +67,11 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
             AuthorizationEvent authorizationEvent = null;
 
             string requestUri = "auditlog/api/v1/authorizationevent/";
+            Mock<IAuthorizationEventRepository> authzEventRepository = new Mock<IAuthorizationEventRepository>();
+            authzEventRepository.Setup(q => q.InsertAuthorizationEvent(It.IsAny<AuthorizationEvent>())).Returns(Task.FromResult(authorizationEvent));
+
+            _client = SetupUtil.GetTestClient(_factory, authzEventRepository.Object);
+            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
@@ -81,6 +86,28 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
+        [Fact]
+        public async Task CreateAuthorizationEvent_Exception()
+        {
+            string requestUri = "auditlog/api/v1/authorizationevent/";
+            Mock<IAuthorizationEventRepository> authzEventRepository = new Mock<IAuthorizationEventRepository>();
+            authzEventRepository.Setup(q => q.InsertAuthorizationEvent(It.IsAny<AuthorizationEvent>())).Throws<System.ArgumentException>();
+            _client = SetupUtil.GetTestClient(_factory, authzEventRepository.Object);
+            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(GetAuthorizationEvent()), Encoding.UTF8, "application/json")
+            };
+
+            httpRequestMessage.Headers.Add("Accept", "application/json");
+            httpRequestMessage.Headers.Add("ContentType", "application/json");
+
+            HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
+
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        }
+
         private AuthorizationEvent GetAuthorizationEvent()
         {
             AuthorizationEvent authorizationEvent = new AuthorizationEvent()
@@ -91,8 +118,8 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
                 InstanceId = "1000/26133fb5-a9f2-45d4-90b1-f6d93ad40713",
                 Operation = "read",
                 IpAdress = "192.0.2.1",
-                ContextRequestJson = "{\"ReturnPolicyIdList\":false,\"CombinedDecision\":false,\"XPathVersion\":null,\"Attributes\":[{\"Id\":null,\"Content\":null,\"Attributes\":[{\"Issuer\":null,\"AttributeId\":\"urn:altinn:org\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"skd\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[{\"IsNamespaceDeclaration\":false,\"Name\":{\"LocalName\":\"DataType\",\"Namespace\":{\"NamespaceName\":\"\"},\"NamespaceName\":\"\"},\"NextAttribute\":null,\"NodeType\":2,\"PreviousAttribute\":null,\"Value\":\"http://www.w3.org/2001/XMLSchema#string\",\"BaseUri\":\"\",\"Document\":null,\"Parent\":null}],\"Elements\":[]}]}],\"Category\":\"urn:oasis:names:tc:xacml:1.0:subject-category:access-subject\"},{\"Id\":null,\"Content\":null,\"Attributes\":[{\"Issuer\":null,\"AttributeId\":\"urn:altinn:instance-id\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"1000/26133fb5-a9f2-45d4-90b1-f6d93ad40713\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[{\"IsNamespaceDeclaration\":false,\"Name\":{\"LocalName\":\"DataType\",\"Namespace\":{\"NamespaceName\":\"\"},\"NamespaceName\":\"\"},\"NextAttribute\":null,\"NodeType\":2,\"PreviousAttribute\":null,\"Value\":\"http://www.w3.org/2001/XMLSchema#string\",\"BaseUri\":\"\",\"Document\":null,\"Parent\":null}],\"Elements\":[]}]},{\"Issuer\":null,\"AttributeId\":\"urn:altinn:org\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"skd\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[],\"Elements\":[]}]},{\"Issuer\":null,\"AttributeId\":\"urn:altinn:app\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"taxreport\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[],\"Elements\":[]}]},{\"Issuer\":null,\"AttributeId\":\"urn:altinn:task\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"Task_1\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[],\"Elements\":[]}]},{\"Issuer\":null,\"AttributeId\":\"urn:altinn:partyid\",\"IncludeInResult\":true,\"AttributeValues\":[{\"Value\":\"1000\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[],\"Elements\":[]}]}],\"Category\":\"urn:oasis:names:tc:xacml:3.0:attribute-category:resource\"},{\"Id\":null,\"Content\":null,\"Attributes\":[{\"Issuer\":null,\"AttributeId\":\"urn:oasis:names:tc:xacml:1.0:action:action-id\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"read\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[{\"IsNamespaceDeclaration\":false,\"Name\":{\"LocalName\":\"DataType\",\"Namespace\":{\"NamespaceName\":\"\"},\"NamespaceName\":\"\"},\"NextAttribute\":null,\"NodeType\":2,\"PreviousAttribute\":null,\"Value\":\"http://www.w3.org/2001/XMLSchema#string\",\"BaseUri\":\"\",\"Document\":null,\"Parent\":null}],\"Elements\":[]}]}],\"Category\":\"urn:oasis:names:tc:xacml:3.0:attribute-category:action\"},{\"Id\":null,\"Content\":null,\"Attributes\":[],\"Category\":\"urn:oasis:names:tc:xacml:3.0:attribute-category:environment\"}],\"RequestReferences\":[]}"
-
+                ContextRequestJson = "{\"ReturnPolicyIdList\":false,\"CombinedDecision\":false,\"XPathVersion\":null,\"Attributes\":[{\"Id\":null,\"Content\":null,\"Attributes\":[{\"Issuer\":null,\"AttributeId\":\"urn:altinn:org\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"skd\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[{\"IsNamespaceDeclaration\":false,\"Name\":{\"LocalName\":\"DataType\",\"Namespace\":{\"NamespaceName\":\"\"},\"NamespaceName\":\"\"},\"NextAttribute\":null,\"NodeType\":2,\"PreviousAttribute\":null,\"Value\":\"http://www.w3.org/2001/XMLSchema#string\",\"BaseUri\":\"\",\"Document\":null,\"Parent\":null}],\"Elements\":[]}]}],\"Category\":\"urn:oasis:names:tc:xacml:1.0:subject-category:access-subject\"},{\"Id\":null,\"Content\":null,\"Attributes\":[{\"Issuer\":null,\"AttributeId\":\"urn:altinn:instance-id\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"1000/26133fb5-a9f2-45d4-90b1-f6d93ad40713\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[{\"IsNamespaceDeclaration\":false,\"Name\":{\"LocalName\":\"DataType\",\"Namespace\":{\"NamespaceName\":\"\"},\"NamespaceName\":\"\"},\"NextAttribute\":null,\"NodeType\":2,\"PreviousAttribute\":null,\"Value\":\"http://www.w3.org/2001/XMLSchema#string\",\"BaseUri\":\"\",\"Document\":null,\"Parent\":null}],\"Elements\":[]}]},{\"Issuer\":null,\"AttributeId\":\"urn:altinn:org\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"skd\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[],\"Elements\":[]}]},{\"Issuer\":null,\"AttributeId\":\"urn:altinn:app\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"taxreport\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[],\"Elements\":[]}]},{\"Issuer\":null,\"AttributeId\":\"urn:altinn:task\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"Task_1\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[],\"Elements\":[]}]},{\"Issuer\":null,\"AttributeId\":\"urn:altinn:partyid\",\"IncludeInResult\":true,\"AttributeValues\":[{\"Value\":\"1000\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[],\"Elements\":[]}]}],\"Category\":\"urn:oasis:names:tc:xacml:3.0:attribute-category:resource\"},{\"Id\":null,\"Content\":null,\"Attributes\":[{\"Issuer\":null,\"AttributeId\":\"urn:oasis:names:tc:xacml:1.0:action:action-id\",\"IncludeInResult\":false,\"AttributeValues\":[{\"Value\":\"read\",\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"Attributes\":[{\"IsNamespaceDeclaration\":false,\"Name\":{\"LocalName\":\"DataType\",\"Namespace\":{\"NamespaceName\":\"\"},\"NamespaceName\":\"\"},\"NextAttribute\":null,\"NodeType\":2,\"PreviousAttribute\":null,\"Value\":\"http://www.w3.org/2001/XMLSchema#string\",\"BaseUri\":\"\",\"Document\":null,\"Parent\":null}],\"Elements\":[]}]}],\"Category\":\"urn:oasis:names:tc:xacml:3.0:attribute-category:action\"},{\"Id\":null,\"Content\":null,\"Attributes\":[],\"Category\":\"urn:oasis:names:tc:xacml:3.0:attribute-category:environment\"}],\"RequestReferences\":[]}",
+                Decision = Core.Enum.XacmlContextDecision.Permit
             };
 
             return authorizationEvent;

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Altinn.Auth.AuditLog.Core.Enum;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Altinn.Auth.AuditLog.Core.Models
@@ -9,6 +10,11 @@ namespace Altinn.Auth.AuditLog.Core.Models
     [ExcludeFromCodeCoverage]
     public class AuthorizationEvent
     {
+        /// <summary>
+        /// Session Id of the request
+        /// </summary>
+        public string? SessionId { get; set; }
+
         /// <summary>
         /// Date, time of the authorization event. Set by producer of logevents
         /// </summary>
@@ -47,17 +53,12 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// <summary>
         /// Instance Id when applicable
         /// </summary>
-        public string InstanceId { get; set; }
+        public string? InstanceId { get; set; }
 
         /// <summary>
         /// Type of operation
         /// </summary>
         public string Operation { get; set; }
-
-        /// <summary>
-        /// Duration of log retention
-        /// </summary>
-        public DateTime TimeToDelete { get; set; }
 
         /// <summary>
         /// The Ip adress of the calling party
@@ -72,6 +73,6 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// <summary>
         /// Decision for the authorization request
         /// </summary>
-        public string Decision { get; set; }
+        public XacmlContextDecision Decision { get; set; }
     }
 }

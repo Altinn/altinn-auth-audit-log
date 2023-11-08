@@ -23,7 +23,7 @@ export default function () {
   var res = authenticationevent.createauthenticationevent(body);
   console.log(res.status);
   var success = check(res, {
-    'Create authentication event status is 201': (r) => r.status === 201,
+    'Create authentication event status is 200': (r) => r.status === 201,
   });
   addErrorCount(success);
   sleep(2);

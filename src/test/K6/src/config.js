@@ -13,9 +13,18 @@ export var baseUrls = {
 //Get values from environment
 const environment = __ENV.env.toLowerCase();
 export let baseUrl = baseUrls[environment];
+export let protocol;
+if(environment == 'local')
+{
+  protocol = 'http://';
+}
+else
+{
+  protocol = 'https://';
+}
 
 //Audit log
 export var auditLog = {
-  authenticationevent: 'http://' + baseUrl + '/auditlog/api/v1/authenticationevent/',
-  authorizationevent: 'https://' + baseUrl + '/auditlog/api/v1/authorizationevent/eventlog/',
+  authenticationevent: protocol + baseUrl + '/auditlog/api/v1/authenticationevent/',
+  authorizationevent: protocol + baseUrl + '/auditlog/api/v1/authorizationevent/',
 };
