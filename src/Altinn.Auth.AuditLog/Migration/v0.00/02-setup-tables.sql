@@ -133,6 +133,9 @@ INSERT INTO authentication.authenticationlevel(
 CREATE TABLE IF NOT EXISTS authentication.eventlog
 (
 	sessionid text,
+	externalsessionid text,
+	subscriptionkey text,
+	externaltokenissuer text,
 	created timestamp with time zone NOT NULL,
 	userid integer,
 	supplierid text,
