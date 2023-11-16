@@ -1,6 +1,9 @@
 -- Procedure: create_authenticationevent
 CREATE OR REPLACE FUNCTION authentication.create_authenticationevent(
 	_sessionid text,
+	_externalsessionid text,
+	_subscriptionkey text,
+	_externaltokenissuer text,
 	_created timestamp,
 	_userid integer,
 	_supplierid text,
@@ -17,6 +20,9 @@ CREATE OR REPLACE FUNCTION authentication.create_authenticationevent(
 AS $BODY$
 INSERT INTO authentication.eventlog(
 	sessionid,
+	externalsessionid,
+	subscriptionkey,
+	externaltokenissuer,
 	created,
 	userid,
 	supplierid,
@@ -29,6 +35,9 @@ INSERT INTO authentication.eventlog(
 )
 VALUES (
 	_sessionid,
+	_externalsessionid,
+	_subscriptionkey,
+	_externaltokenissuer,
 	_created,
 	_userid,
 	_supplierid,

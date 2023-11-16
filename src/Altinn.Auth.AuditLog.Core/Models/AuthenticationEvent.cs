@@ -17,6 +17,16 @@ namespace Altinn.Auth.AuditLog.Core.Models
         public string? SessionId { get; set; }
 
         /// <summary>
+        /// External Session Id of the authentication request if found
+        /// </summary>
+        public string? ExternalSessionId { get; set; }
+
+        /// <summary>
+        /// External Token issuer of the authentication request if found
+        /// </summary>
+        public string? ExternalTokenIssuer { get; set; }
+
+        /// <summary>
         /// Date, time of the authentication event. Set by producer of logevents
         /// </summary>
         public DateTime Created { get; set; }
@@ -60,5 +70,10 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// The authentication result
         /// </summary>
         public bool IsAuthenticated { get; set; }
+
+        /// <summary>
+        /// Subscription key of the app that triggered the authentiation request
+        /// </summary>
+        public string? SubscriptionKey { get; set; }
     }
 }
