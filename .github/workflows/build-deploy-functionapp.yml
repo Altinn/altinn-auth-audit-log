@@ -22,7 +22,10 @@ env:
 jobs:
   build-and-deploy:
     runs-on: windows-latest
-    environment: dev
+    environment: AT22
+    permissions:
+      contents: read
+      packages: write
     steps:
     - name: 'Checkout GitHub Action'
       uses: actions/checkout@v3
