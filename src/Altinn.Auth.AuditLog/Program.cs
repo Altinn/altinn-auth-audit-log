@@ -70,9 +70,14 @@ void ConfigurePostgreSql()
 
 void ConfigureServices(IServiceCollection services, IConfiguration config)
 {
+    string connectionString = string.Format(
+    builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
+    builder.Configuration.GetValue<string>("PostgreSQLSettings:AuthAuditLogDbAdminPwd"));
+    bool logParameters = builder.Configuration.GetValue<bool>("PostgreSQLSettings:LogParameters");
     services.AddSingleton<IAuthenticationEventService, AuthenticationEventService>();
     services.AddSingleton<IAuthenticationEventRepository, AuthenticationEventRepository>();
     services.AddSingleton<IAuthorizationEventService, AuthorizationEventService>();
     services.AddSingleton<IAuthorizationEventRepository, AuthorizationEventRepository>();
     services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
+    services.AddNpgsqlDataSource(connectionString, builder => builder.EnableParameterLogging(logParameters));
 }
