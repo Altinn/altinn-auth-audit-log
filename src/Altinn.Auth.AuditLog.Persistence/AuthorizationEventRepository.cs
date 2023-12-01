@@ -21,13 +21,11 @@ namespace Altinn.Auth.AuditLog.Persistence
     {
         private readonly ILogger _logger;
         private readonly NpgsqlDataSource _dataSource;
-
-        private readonly string insertAuthorizationEvent = "select * from authz.create_authorizationevent(@_sessionid,@_created,@_subjectuserid,@_subjectorgcode,@_subjectorgnumber,@_subjectparty,@_resourcepartyid,@_resource,@_instanceid,@_operation,@_ipadress,@_contextrequestjson,@_decision)";
-
+      
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthorizationEventRepository"/> class
         /// </summary>
-        /// <param name="postgresSettings">The postgreSQL configurations for AuditLogDB</param>
+        /// <param name="dataSource">The postgreSQL datasource for AuditLogDB</param>
         /// <param name="logger">handler for logger service</param>
         public AuthorizationEventRepository(
             NpgsqlDataSource dataSource,

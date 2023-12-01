@@ -23,7 +23,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthenticationEventRepository"/> class
         /// </summary>
-        /// <param name="postgresSettings">The postgreSQL configurations for AuditLogDB</param>
+        /// <param name="dataSource">The postgreSQL datasource for AuditLogDB</param>
         /// <param name="logger">handler for logger service</param>
         public AuthenticationEventRepository(
             NpgsqlDataSource dataSource,
