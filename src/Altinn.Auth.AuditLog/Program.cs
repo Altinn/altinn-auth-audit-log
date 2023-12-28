@@ -126,7 +126,7 @@ void ConfigureSetupLogging()
         builder
             .AddFilter("Microsoft", LogLevel.Warning)
             .AddFilter("System", LogLevel.Warning)
-            .AddFilter("Altinn.AccessManagement.UI.Program", LogLevel.Debug)
+            .AddFilter("Altinn.Auth.AuditLog.Program", LogLevel.Debug)
         .AddConsole();
     });
 
