@@ -64,7 +64,7 @@ namespace Altinn.Auth.AuditLog.Functions.Models
         /// <summary>
         /// The ipadress of the authentication request
         /// </summary>
-        public string? IpAdress { get; set; }
+        public string? IpAddress { get; set; }
 
         /// <summary>
         /// The authentication result

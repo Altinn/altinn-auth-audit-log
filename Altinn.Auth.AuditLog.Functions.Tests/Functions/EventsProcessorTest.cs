@@ -56,7 +56,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Functions
             Assert.Equal(expectedAuthenticationEvent.OrgNumber, actualAuthenticationEvent.OrgNumber);
             Assert.Equal(expectedAuthenticationEvent.SupplierId, actualAuthenticationEvent.SupplierId);
             Assert.Equal(expectedAuthenticationEvent.UserId, actualAuthenticationEvent.UserId);
-            Assert.Equal(expectedAuthenticationEvent.IpAdress, actualAuthenticationEvent.IpAdress);
+            Assert.Equal(expectedAuthenticationEvent.IpAddress, actualAuthenticationEvent.IpAddress);
             return true;
         }
     }
