@@ -27,7 +27,7 @@ jobs:
       id-token: write
     steps:
     - name: 'Checkout GitHub Action'
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Azure Login
       uses: azure/login@v1
@@ -62,7 +62,7 @@ jobs:
       id-token: write
     steps:
     - name: 'Checkout GitHub Action'
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Azure Login
       uses: azure/login@v1
@@ -97,7 +97,7 @@ jobs:
       id-token: write
     steps:
     - name: 'Checkout GitHub Action'
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Azure Login
       uses: azure/login@v1
@@ -132,7 +132,7 @@ jobs:
       id-token: write
     steps:
     - name: 'Checkout GitHub Action'
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Azure Login
       uses: azure/login@v1
