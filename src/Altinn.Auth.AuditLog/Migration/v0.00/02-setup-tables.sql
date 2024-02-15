@@ -90,13 +90,19 @@ INSERT INTO authentication.authenticationmethod(
 	VALUES (15, 'MinIDOTC', 'MinIDOTC');
 INSERT INTO authentication.authenticationmethod(
 	authenticationmethodid, name, description)
-	VALUES (16, 'MaskinPorten', 'MaskinPorten');
+	VALUES (16, 'EnterpriseMaskinportenIdentified', 'EnterpriseMaskinportenIdentified');
 INSERT INTO authentication.authenticationmethod(
 	authenticationmethodid, name, description)
-	VALUES (17, 'VirksomhetsBruker', 'VirksomhetsBruker');
+	VALUES (17, 'IdportenTestId', 'IdportenTestId');
 INSERT INTO authentication.authenticationmethod(
 	authenticationmethodid, name, description)
-	VALUES (18, 'TestID', 'TestID');
+	VALUES (18, 'MinIDApp', 'MinIDApp');
+INSERT INTO authentication.authenticationmethod(
+	authenticationmethodid, name, description)
+	VALUES (19, 'VirksomhetsBruker', 'VirksomhetsBruker');
+INSERT INTO authentication.authenticationmethod(
+	authenticationmethodid, name, description)
+	VALUES (20, 'MaskinPorten', 'MaskinPorten');
 
 
 
