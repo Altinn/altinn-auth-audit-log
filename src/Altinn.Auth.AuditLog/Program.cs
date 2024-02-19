@@ -68,17 +68,6 @@ async Task ConfigurePostgreSql(ConfigurationManager config)
     {
         ConsoleTraceService traceService = new ConsoleTraceService { IsDebugEnabled = true };
 
-        KeyVaultSettings keyVaultSettings = new KeyVaultSettings();
-
-        config.GetSection("KeyVaultSettings").Bind(keyVaultSettings);
-
-        SecretClient client = new SecretClient(new Uri(keyVaultSettings.SecretUri), new DefaultAzureCredential());
-        KeyVaultSecret dbAdminConnectionsecret = await client.GetSecretAsync(postgreDbAdminConnectionStringSecretName);
-        postgreDbAdminConnectionString = dbAdminConnectionsecret.Value;
-
-        KeyVaultSecret dbConnectionsecret = await client.GetSecretAsync(postgreDbConnectionStringSecretName);
-        postgreDbConnectionString = dbConnectionsecret.Value;
-
         string workspacePath = Path.Combine(Environment.CurrentDirectory, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath"));
         if (builder.Environment.IsDevelopment())
         {
@@ -181,11 +170,11 @@ async Task SetConfigurationProviders(ConfigurationManager config)
 
     if (!builder.Environment.IsDevelopment())
     {
-        await ConnectToKeyVaultAndSetApplicationInsights(config);
+        await ConfigureKeyVaultSettings(config);
     }
 }
 
-async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager config)
+async Task ConfigureKeyVaultSettings(ConfigurationManager config)
 {
     logger.LogInformation("Program // Connect to key vault and set up application insights");
 
@@ -197,10 +186,16 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
         SecretClient client = new SecretClient(new Uri(keyVaultSettings.SecretUri), new DefaultAzureCredential());
         KeyVaultSecret secret = await client.GetSecretAsync(applicationInsightsKeySecretName);
         applicationInsightsConnectionString = string.Format("InstrumentationKey={0}", secret.Value);
+
+        KeyVaultSecret dbAdminConnectionsecret = await client.GetSecretAsync(postgreDbAdminConnectionStringSecretName);
+        postgreDbAdminConnectionString = dbAdminConnectionsecret.Value;
+
+        KeyVaultSecret dbConnectionsecret = await client.GetSecretAsync(postgreDbConnectionStringSecretName);
+        postgreDbConnectionString = dbConnectionsecret.Value;
     }
     catch (Exception vaultException)
     {
-        logger.LogError(vaultException, "Unable to read application insights key.");
+        logger.LogError(vaultException, "Unable to read key vault settings.");
     }
 
     try
