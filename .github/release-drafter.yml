@@ -1,0 +1,21 @@
+template: |
+  # Changelog
+  $CHANGES
+  
+  See details of [all code changes](https://github.com/altinn/altinn-auth-audit-log/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION) since previous release 
+  
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'kind/feature-request'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'kind/bug'
+      - 'bugfix'
+  - title: '🧰 Maintenance'
+    labels:
+      - 'kind/documentation'
+      - 'dependencies'
+      - 'enhancement'
+      - 'kind/chore'
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
