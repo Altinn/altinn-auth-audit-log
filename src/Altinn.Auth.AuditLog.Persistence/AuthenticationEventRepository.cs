@@ -49,7 +49,8 @@ namespace Altinn.Auth.AuditLog.Persistence
 	        authenticationmethodid,
 	        authenticationlevelid,
 	        ipaddress,
-	        isauthenticated
+	        isauthenticated,
+            app
             )
             VALUES (
 	            @sessionid,
@@ -64,7 +65,8 @@ namespace Altinn.Auth.AuditLog.Persistence
 	            @authenticationmethodid,
 	            @authenticationlevelid,
 	            @ipaddress,
-	            @isauthenticated
+	            @isauthenticated,
+                @app
             )
             RETURNING *;";
 
@@ -90,6 +92,7 @@ namespace Altinn.Auth.AuditLog.Persistence
                 pgcom.Parameters.AddWithValue("authenticationlevelid", NpgsqlTypes.NpgsqlDbType.Integer, (authenticationEvent.AuthenticationLevel == null) ? DBNull.Value : Convert.ToInt32(authenticationEvent.AuthenticationLevel));
                 pgcom.Parameters.AddWithValue("ipaddress", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.IpAddress) ? DBNull.Value : authenticationEvent.IpAddress);                
                 pgcom.Parameters.AddWithValue("isauthenticated", NpgsqlTypes.NpgsqlDbType.Boolean, authenticationEvent.IsAuthenticated);
+                pgcom.Parameters.AddWithValue("app", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.App) ? DBNull.Value : authenticationEvent.App);
 
 
                 await pgcom.ExecuteNonQueryAsync();

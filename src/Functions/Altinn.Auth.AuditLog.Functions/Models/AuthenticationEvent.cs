@@ -37,6 +37,11 @@ namespace Altinn.Auth.AuditLog.Functions.Models
         public int? UserId { get; set; }
 
         /// <summary>
+        /// App name in the exchange token 
+        /// </summary>
+        public string? App { get; set; }
+
+        /// <summary>
         /// Relevant if the event is triggered by enterprise user
         /// </summary>
         public string? SupplierId { get; set; }

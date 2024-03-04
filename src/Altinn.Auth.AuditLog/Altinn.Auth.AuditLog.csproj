@@ -30,4 +30,8 @@
     <ProjectReference Include="..\Altinn.Auth.AuditLog.Persistence\Altinn.Auth.AuditLog.Persistence.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Migration\v0.02\" />
+  </ItemGroup>
+
 </Project>
