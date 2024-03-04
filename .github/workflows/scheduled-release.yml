@@ -118,7 +118,24 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+      - name: Get package versions
+        uses: octokit/request-action@v2.x
+        id: get_package_versions
+        with:
+          route: GET /user/packages/container/altinn-access-management-frontend/versions
+          mediaType: | # The | is significant!
+            format: raw
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Get latest imagetag
+        id: get_imagetag
+        run: |
+         responses='${{ steps.get_package_versions.outputs.data }}'
+         echo $responses | jq '.[0] | .metadata.container.tags[0]' | sed 's/"//g'
+         latesttag=$(echo $responses | jq '.[0] | .metadata.container.tags[0]' | sed 's/"//g')
+         echo "version:$latesttag"         
+         echo "imagetag=$latesttag" >> $GITHUB_OUTPUT
       - id: version
         uses: battila7/get-version-action@v2
       - name: Add Version tag to Docker Image
@@ -126,7 +143,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           repository: '${{ env.IMAGE_NAME }}'
-          target: '${{ steps.get_commit_sha.outputs.commitid }}'
+          target: '${{ steps.get_imagetag.outputs.imagetag }}'
           tags: ${{ needs.getlatestrelease.outputs.RELEASEVERSION }}
 
   update_release_draft:
