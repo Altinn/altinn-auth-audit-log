@@ -24,8 +24,8 @@ string applicationInsightsKeySecretName = "ApplicationInsights--InstrumentationK
 string postgreDbAdminConnectionStringSecretName = "PostgreSQLSettings--AdminConnectionString";
 string postgreDbConnectionStringSecretName = "PostgreSQLSettings--ConnectionString";
 string applicationInsightsConnectionString = string.Empty;
-string postgreDbAdminConnectionString = "Host=localhost;Port=5432;Username=auth_auditlog_admin;Password=Password;Database=authauditlogdb";
-string postgreDbConnectionString = "Host=localhost;Port=5432;Username=auth_auditlog;Password=Password;Database=authauditlogdb";
+string postgreDbAdminConnectionString = string.Empty;
+string postgreDbConnectionString = string.Empty;
 
 
 ConfigureSetupLogging();
