@@ -1,12 +1,31 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Altinn.Auth.AuditLog.Core.Enum;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
+using System.Net.Security;
 
 namespace Altinn.Auth.AuditLog.Core.Models
 {
     /// <summary>
     /// This model describes an authentication event. An authentication event is an action triggered when a user authenticates to altinn
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class AuthenticationEvent
     {
+        /// <summary>
+        /// Session Id of the authentication request
+        /// </summary>
+        public string? SessionId { get; set; }
+
+        /// <summary>
+        /// External Session Id of the authentication request if found
+        /// </summary>
+        public string? ExternalSessionId { get; set; }
+
+        /// <summary>
+        /// External Token issuer of the authentication request if found
+        /// </summary>
+        public string? ExternalTokenIssuer { get; set; }
+
         /// <summary>
         /// Date, time of the authentication event. Set by producer of logevents
         /// </summary>
@@ -15,7 +34,7 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// <summary>
         /// Id of the user that triggered that authentication event 
         /// </summary>
-        public string UserId { get; set; }
+        public int? UserId { get; set; }
 
         /// <summary>
         /// Relevant if the event is triggered by enterprise user
@@ -23,28 +42,38 @@ namespace Altinn.Auth.AuditLog.Core.Models
         public string? SupplierId { get; set; }
 
         /// <summary>
-        /// The type of authentication event
-        /// </summary>
-        public string EventType { get; set; }
-
-        /// <summary>
         /// Relevant if the event is triggered by enterprise user?
         /// </summary>
-        public string? OrgNumber { get; set; }
+        public int? OrgNumber { get; set; }
+
+        /// <summary>
+        /// The type of authentication event
+        /// </summary>
+        public AuthenticationEventType EventType { get; set; }
 
         /// <summary>
         /// The type of authentication used by the user (BankId etc)
         /// </summary>
-        public string AuthenticationMethod { get; set; }
+        public AuthenticationMethod? AuthenticationMethod { get; set; }
 
         /// <summary>
         /// The level of authentication used by the user (1, 2,  etc)
         /// </summary>
-        public string AuthenticationLevel { get; set; }
+        public SecurityLevel? AuthenticationLevel { get; set; }
 
         /// <summary>
         /// The session id
         /// </summary>
-        public string SessionId { get; set; }
+        public string? IpAddress { get; set; }
+
+        /// <summary>
+        /// The authentication result
+        /// </summary>
+        public bool IsAuthenticated { get; set; }
+
+        /// <summary>
+        /// Subscription key of the app that triggered the authentiation request
+        /// </summary>
+        public string? SubscriptionKey { get; set; }
     }
 }

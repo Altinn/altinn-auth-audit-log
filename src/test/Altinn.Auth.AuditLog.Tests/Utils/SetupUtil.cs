@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,7 +27,6 @@ namespace Altinn.Auth.AuditLog.Tests.Utils
                 {
                     services.AddSingleton<IAuthenticationEventRepository, AuthenticationEventRepositoryMock>();
                     services.AddSingleton<IAuthenticationEventService, AuthenticationEventService>();
-
                 });
             });
             factory.Server.AllowSynchronousIO = true;
@@ -34,14 +34,18 @@ namespace Altinn.Auth.AuditLog.Tests.Utils
         }
 
         public static HttpClient GetTestClient(
-            CustomWebApplicationFactory<AuthorizationEventController> customFactory)
+            CustomWebApplicationFactory<AuthorizationEventController> customFactory,
+            IAuthorizationEventRepository authzEventRepository)
         {
             WebApplicationFactory<AuthorizationEventController> factory = customFactory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureTestServices(services =>
-                {
-                    services.AddSingleton<IAuthorizationEventRepository, AuthorizationEventRepositoryMock>();
+                {                    
                     services.AddSingleton<IAuthorizationEventService, AuthorizationEventService>();
+                    if (authzEventRepository != null)
+                    {
+                        services.AddSingleton(authzEventRepository);
+                    }
 
                 });
             });

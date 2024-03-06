@@ -1,4 +1,5 @@
 ﻿using Altinn.Auth.AuditLog.Controllers;
+using Altinn.Auth.AuditLog.Core.Enum;
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Tests.Utils;
@@ -45,13 +46,12 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
         public async Task CreateAuthenticationEvent_Ok()
         {
             AuthenticationEvent authenticationEvent = new AuthenticationEvent()
-            {
-                UserId = "20000003",
-                Created = DateTime.UtcNow,
-                AuthenticationMethod = "BankId",
-                EventType = "LoggedIn",
-                SessionId = "83343b4c-865d-4e6c-888d-33bc7533ea2d",
-                AuthenticationLevel = "4",
+            {                
+                Created = new DateTime(2018, 05, 15, 02, 05, 00),
+                UserId = 20000003,
+                AuthenticationMethod = AuthenticationMethod.BankID,
+                EventType = AuthenticationEventType.Authenticate,
+                AuthenticationLevel = SecurityLevel.VerySensitive
             };
 
             string requestUri = "auditlog/api/v1/authenticationevent/";
