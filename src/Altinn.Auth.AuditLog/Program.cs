@@ -21,7 +21,12 @@ var builder = WebApplication.CreateBuilder(args);
 ILogger logger;
 
 string applicationInsightsKeySecretName = "ApplicationInsights--InstrumentationKey";
+string postgreDbAdminConnectionStringSecretName = "PostgreSQLSettings--AdminConnectionString";
+string postgreDbConnectionStringSecretName = "PostgreSQLSettings--ConnectionString";
 string applicationInsightsConnectionString = string.Empty;
+string postgreDbAdminConnectionString = "Host=localhost;Port=5432;Username=auth_auditlog_admin;Password=Password;Database=authauditlogdb";
+string postgreDbConnectionString = "Host=localhost;Port=5432;Username=auth_auditlog;Password=Password;Database=authauditlogdb";
+
 
 ConfigureSetupLogging();
 
@@ -53,19 +58,15 @@ app.MapControllers();
 
 app.MapHealthChecks("/health");
 
-ConfigurePostgreSql();
+await ConfigurePostgreSql(builder.Configuration);
 
 app.Run();
 
-void ConfigurePostgreSql()
+async Task ConfigurePostgreSql(ConfigurationManager config)
 {
     if (builder.Configuration.GetValue<bool>("PostgreSQLSettings:EnableDBConnection"))
     {
         ConsoleTraceService traceService = new ConsoleTraceService { IsDebugEnabled = true };
-
-        string connectionString = string.Format(
-            builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
-            builder.Configuration.GetValue<string>("PostgreSQLSettings:AuthAuditLogDbAdminPwd"));
 
         string workspacePath = Path.Combine(Environment.CurrentDirectory, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath"));
         if (builder.Environment.IsDevelopment())
@@ -80,7 +81,7 @@ void ConfigurePostgreSql()
             new Yuniql.AspNetCore.Configuration
             {
                 Workspace = workspacePath,
-                ConnectionString = connectionString,
+                ConnectionString = postgreDbAdminConnectionString,
                 IsAutoCreateDatabase = false,
                 IsDebug = true,
             });
@@ -89,9 +90,6 @@ void ConfigurePostgreSql()
 
 void ConfigureServices(IServiceCollection services, IConfiguration config)
 {
-    string connectionString = string.Format(
-    builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString"),
-    builder.Configuration.GetValue<string>("PostgreSQLSettings:AuthAuditLogDbAdminPwd"));
     bool logParameters = builder.Configuration.GetValue<bool>("PostgreSQLSettings:LogParameters");
     services.AddHealthChecks().AddCheck<HealthCheck>("auditlog_ui_health_check");
     services.AddSingleton<IAuthenticationEventService, AuthenticationEventService>();
@@ -100,7 +98,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.AddSingleton<IAuthorizationEventRepository, AuthorizationEventRepository>();
     services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
     services.Configure<KeyVaultSettings>(config.GetSection("KeyVaultSettings"));
-    services.AddNpgsqlDataSource(connectionString, builder => builder.EnableParameterLogging(logParameters));
+    services.AddNpgsqlDataSource(postgreDbConnectionString, builder => builder.EnableParameterLogging(logParameters));
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
@@ -172,11 +170,11 @@ async Task SetConfigurationProviders(ConfigurationManager config)
 
     if (!builder.Environment.IsDevelopment())
     {
-        await ConnectToKeyVaultAndSetApplicationInsights(config);
+        await ConfigureKeyVaultSettings(config);
     }
 }
 
-async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager config)
+async Task ConfigureKeyVaultSettings(ConfigurationManager config)
 {
     logger.LogInformation("Program // Connect to key vault and set up application insights");
 
@@ -188,10 +186,16 @@ async Task ConnectToKeyVaultAndSetApplicationInsights(ConfigurationManager confi
         SecretClient client = new SecretClient(new Uri(keyVaultSettings.SecretUri), new DefaultAzureCredential());
         KeyVaultSecret secret = await client.GetSecretAsync(applicationInsightsKeySecretName);
         applicationInsightsConnectionString = string.Format("InstrumentationKey={0}", secret.Value);
+
+        KeyVaultSecret dbAdminConnectionsecret = await client.GetSecretAsync(postgreDbAdminConnectionStringSecretName);
+        postgreDbAdminConnectionString = dbAdminConnectionsecret.Value;
+
+        KeyVaultSecret dbConnectionsecret = await client.GetSecretAsync(postgreDbConnectionStringSecretName);
+        postgreDbConnectionString = dbConnectionsecret.Value;
     }
     catch (Exception vaultException)
     {
-        logger.LogError(vaultException, "Unable to read application insights key.");
+        logger.LogError(vaultException, "Unable to read key vault settings.");
     }
 
     try
