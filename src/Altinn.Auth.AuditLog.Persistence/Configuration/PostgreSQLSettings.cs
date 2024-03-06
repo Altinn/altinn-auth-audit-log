@@ -14,5 +14,10 @@ namespace Altinn.Auth.AuditLog.Persistence.Configuration
         /// Password for app user for the postgres db
         /// </summary>
         public string AuthAuditLogDbPwd { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to include parameter values in logging/tracing.
+        /// </summary>
+        public bool LogParameters { get; set; } = false;
     }
 }

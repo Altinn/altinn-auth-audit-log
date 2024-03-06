@@ -10,7 +10,7 @@ namespace Altinn.Auth.AuditLog.Tests.Mocks
 {
     public class AuthorizationEventRepositoryMock : IAuthorizationEventRepository
     {
-        public Task<AuthorizationEvent> InsertAuthorizationEvent(AuthorizationEvent authorizationEvent)
+        public Task InsertAuthorizationEvent(AuthorizationEvent authorizationEvent)
         {
             return Task.FromResult(authorizationEvent);
         }

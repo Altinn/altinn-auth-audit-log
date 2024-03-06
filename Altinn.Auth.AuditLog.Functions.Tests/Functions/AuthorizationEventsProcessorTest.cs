@@ -21,24 +21,11 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Functions
         [Fact]
         public async Task Run_ConfirmDeserializationOfAuthorizationEvent()
         {
-
-            // Arrange
             string serializedAuthorizationEvent = "{" +
-                "\"TimeStamp\":\"0001-01-01T00:00:00\",\"SubjectUserId\":\"2000000\",\"SubjectParty\":\"\"," +
-                "\"ResourcePartyId\":\"1000\",\"Resource\":\"taxreport\",\"InstanceId\":\"1000/26133fb5-a9f2-45d4-90b1-f6d93ad40713\"," +
-                "\"Operation\":\"read\",\"TimeToDelete\":\"\",\"IpAdress\":\"192.0.2.1\"," +
-                "\"ContextRequestJson\":{\"ReturnPolicyIdList\":false," +
-                "\"AccessSubject\":[{\"Attribute\":[{\"Id\":\"urn:altinn:userid\",\"Value\":\"1\",\"DataType\":null,\"IncludeInResult\":false}," +
-                "{\"Id\":\"urn:altinn:role\",\"Value\":\"dagl\",\"DataType\":null,\"IncludeInResult\":false}," +
-                "{\"Id\":\"urn:altinn:role\",\"Value\":\"utinn\",\"DataType\":null,\"IncludeInResult\":false}]}]," +
-                "\"Action\":[{\"Attribute\":[{\"Id\":\"urn:oasis:names:tc:xacml:1.0:action:action-id\",\"Value\":\"read\"," +
-                "\"DataType\":\"http://www.w3.org/2001/XMLSchema#string\",\"IncludeInResult\":false}]}]," +
-                "\"Resources\":[{\"Attribute\":[{\"Id\":\"urn:altinn:instance-id\",\"Value\":\"1000/26133fb5-a9f2-45d4-90b1-f6d93ad40713\"," +
-                "\"DataType\":null,\"IncludeInResult\":true},{\"Id\":\"urn:altinn:org\",\"Value\":\"skd\"," +
-                "\"DataType\":null,\"IncludeInResult\":false},{\"Id\":\"urn:altinn:app\",\"Value\":\"taxreport\"," +
-                "\"DataType\":null,\"IncludeInResult\":false},{\"Id\":\"urn:altinn:partyid\",\"Value\":\"1000\"," +
-                "\"DataType\":null,\"IncludeInResult\":false},{\"Id\":\"urn:altinn:task\",\"Value\":\"formfilling\"," +
-                "\"DataType\":null,\"IncludeInResult\":false}]}]}}\r\n";
+                "\"Created\":\"0001-01-01T00:00:00\",\"SubjectOrgCode\":\"skd\"," +
+                "\"ResourcePartyId\":1000,\"Resource\":\"taxreport\",\"InstanceId\":\"1000/26133fb5-a9f2-45d4-90b1-f6d93ad40713\"," +
+                "\"Operation\":\"read\",\"IpAdress\":\"192.0.2.1\"," +
+                "\"ContextRequestJson\":\"{\\u0022ReturnPolicyIdList\\u0022:false,\\u0022CombinedDecision\\u0022:false,\\u0022XPathVersion\\u0022:null,\\u0022Attributes\\u0022:[{\\u0022Id\\u0022:null,\\u0022Content\\u0022:null,\\u0022Attributes\\u0022:[{\\u0022Issuer\\u0022:null,\\u0022AttributeId\\u0022:\\u0022urn:altinn:org\\u0022,\\u0022IncludeInResult\\u0022:false,\\u0022AttributeValues\\u0022:[{\\u0022Value\\u0022:\\u0022skd\\u0022,\\u0022DataType\\u0022:\\u0022http://www.w3.org/2001/XMLSchema#string\\u0022,\\u0022Attributes\\u0022:[{\\u0022IsNamespaceDeclaration\\u0022:false,\\u0022Name\\u0022:{\\u0022LocalName\\u0022:\\u0022DataType\\u0022,\\u0022Namespace\\u0022:{\\u0022NamespaceName\\u0022:\\u0022\\u0022},\\u0022NamespaceName\\u0022:\\u0022\\u0022},\\u0022NextAttribute\\u0022:null,\\u0022NodeType\\u0022:2,\\u0022PreviousAttribute\\u0022:null,\\u0022Value\\u0022:\\u0022http://www.w3.org/2001/XMLSchema#string\\u0022,\\u0022BaseUri\\u0022:\\u0022\\u0022,\\u0022Document\\u0022:null,\\u0022Parent\\u0022:null}],\\u0022Elements\\u0022:[]}]}],\\u0022Category\\u0022:\\u0022urn:oasis:names:tc:xacml:1.0:subject-category:access-subject\\u0022},{\\u0022Id\\u0022:null,\\u0022Content\\u0022:null,\\u0022Attributes\\u0022:[{\\u0022Issuer\\u0022:null,\\u0022AttributeId\\u0022:\\u0022urn:altinn:instance-id\\u0022,\\u0022IncludeInResult\\u0022:false,\\u0022AttributeValues\\u0022:[{\\u0022Value\\u0022:\\u00221000/26133fb5-a9f2-45d4-90b1-f6d93ad40713\\u0022,\\u0022DataType\\u0022:\\u0022http://www.w3.org/2001/XMLSchema#string\\u0022,\\u0022Attributes\\u0022:[{\\u0022IsNamespaceDeclaration\\u0022:false,\\u0022Name\\u0022:{\\u0022LocalName\\u0022:\\u0022DataType\\u0022,\\u0022Namespace\\u0022:{\\u0022NamespaceName\\u0022:\\u0022\\u0022},\\u0022NamespaceName\\u0022:\\u0022\\u0022},\\u0022NextAttribute\\u0022:null,\\u0022NodeType\\u0022:2,\\u0022PreviousAttribute\\u0022:null,\\u0022Value\\u0022:\\u0022http://www.w3.org/2001/XMLSchema#string\\u0022,\\u0022BaseUri\\u0022:\\u0022\\u0022,\\u0022Document\\u0022:null,\\u0022Parent\\u0022:null}],\\u0022Elements\\u0022:[]}]},{\\u0022Issuer\\u0022:null,\\u0022AttributeId\\u0022:\\u0022urn:altinn:org\\u0022,\\u0022IncludeInResult\\u0022:false,\\u0022AttributeValues\\u0022:[{\\u0022Value\\u0022:\\u0022skd\\u0022,\\u0022DataType\\u0022:\\u0022http://www.w3.org/2001/XMLSchema#string\\u0022,\\u0022Attributes\\u0022:[],\\u0022Elements\\u0022:[]}]},{\\u0022Issuer\\u0022:null,\\u0022AttributeId\\u0022:\\u0022urn:altinn:app\\u0022,\\u0022IncludeInResult\\u0022:false,\\u0022AttributeValues\\u0022:[{\\u0022Value\\u0022:\\u0022taxreport\\u0022,\\u0022DataType\\u0022:\\u0022http://www.w3.org/2001/XMLSchema#string\\u0022,\\u0022Attributes\\u0022:[],\\u0022Elements\\u0022:[]}]},{\\u0022Issuer\\u0022:null,\\u0022AttributeId\\u0022:\\u0022urn:altinn:task\\u0022,\\u0022IncludeInResult\\u0022:false,\\u0022AttributeValues\\u0022:[{\\u0022Value\\u0022:\\u0022Task_1\\u0022,\\u0022DataType\\u0022:\\u0022http://www.w3.org/2001/XMLSchema#string\\u0022,\\u0022Attributes\\u0022:[],\\u0022Elements\\u0022:[]}]},{\\u0022Issuer\\u0022:null,\\u0022AttributeId\\u0022:\\u0022urn:altinn:partyid\\u0022,\\u0022IncludeInResult\\u0022:true,\\u0022AttributeValues\\u0022:[{\\u0022Value\\u0022:\\u00221000\\u0022,\\u0022DataType\\u0022:\\u0022http://www.w3.org/2001/XMLSchema#string\\u0022,\\u0022Attributes\\u0022:[],\\u0022Elements\\u0022:[]}]}],\\u0022Category\\u0022:\\u0022urn:oasis:names:tc:xacml:3.0:attribute-category:resource\\u0022},{\\u0022Id\\u0022:null,\\u0022Content\\u0022:null,\\u0022Attributes\\u0022:[{\\u0022Issuer\\u0022:null,\\u0022AttributeId\\u0022:\\u0022urn:oasis:names:tc:xacml:1.0:action:action-id\\u0022,\\u0022IncludeInResult\\u0022:false,\\u0022AttributeValues\\u0022:[{\\u0022Value\\u0022:\\u0022read\\u0022,\\u0022DataType\\u0022:\\u0022http://www.w3.org/2001/XMLSchema#string\\u0022,\\u0022Attributes\\u0022:[{\\u0022IsNamespaceDeclaration\\u0022:false,\\u0022Name\\u0022:{\\u0022LocalName\\u0022:\\u0022DataType\\u0022,\\u0022Namespace\\u0022:{\\u0022NamespaceName\\u0022:\\u0022\\u0022},\\u0022NamespaceName\\u0022:\\u0022\\u0022},\\u0022NextAttribute\\u0022:null,\\u0022NodeType\\u0022:2,\\u0022PreviousAttribute\\u0022:null,\\u0022Value\\u0022:\\u0022http://www.w3.org/2001/XMLSchema#string\\u0022,\\u0022BaseUri\\u0022:\\u0022\\u0022,\\u0022Document\\u0022:null,\\u0022Parent\\u0022:null}],\\u0022Elements\\u0022:[]}]}],\\u0022Category\\u0022:\\u0022urn:oasis:names:tc:xacml:3.0:attribute-category:action\\u0022},{\\u0022Id\\u0022:null,\\u0022Content\\u0022:null,\\u0022Attributes\\u0022:[],\\u0022Category\\u0022:\\u0022urn:oasis:names:tc:xacml:3.0:attribute-category:environment\\u0022}],\\u0022RequestReferences\\u0022:[]}\"}";
 
             Mock<IAuditLogClient> clientMock = new();
             clientMock.Setup(c => c.SaveAuthorizationEvent(It.Is<AuthorizationEvent>(c => AssertExpectedAuthorizationEvent(c, TestDataHelper.GetAuthorizationEvent()))))
@@ -60,12 +47,8 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Functions
             Assert.Equal(expectedAuthorizationEvent.Operation, actualAuthorizationEvent.Operation);
             Assert.Equal(expectedAuthorizationEvent.Resource, actualAuthorizationEvent.Resource);
             Assert.Equal(expectedAuthorizationEvent.IpAdress, actualAuthorizationEvent.IpAdress);
-            Assert.Equal(expectedAuthorizationEvent.TimeToDelete, actualAuthorizationEvent.TimeToDelete);
-            Assert.Equal(expectedAuthorizationEvent.TimeStamp, actualAuthorizationEvent.TimeStamp);
-            AssertionUtil.AssertCollections(expectedAuthorizationEvent.ContextRequestJson.Action, actualAuthorizationEvent.ContextRequestJson.Action, AssertionUtil.AssertRuleEqual);
-            AssertionUtil.AssertCollections(expectedAuthorizationEvent.ContextRequestJson.AccessSubject, actualAuthorizationEvent.ContextRequestJson.AccessSubject, AssertionUtil.AssertRuleEqual);
-            AssertionUtil.AssertCollections(expectedAuthorizationEvent.ContextRequestJson.Resources, actualAuthorizationEvent.ContextRequestJson.Resources, AssertionUtil.AssertRuleEqual);
-            Assert.Equal(expectedAuthorizationEvent.ContextRequestJson.ReturnPolicyIdList, actualAuthorizationEvent.ContextRequestJson.ReturnPolicyIdList);
+            Assert.Equal(expectedAuthorizationEvent.Created, actualAuthorizationEvent.Created);
+            Assert.Equal(expectedAuthorizationEvent.ContextRequestJson, actualAuthorizationEvent.ContextRequestJson);            
             return true;
         }
     }
