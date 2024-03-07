@@ -1,0 +1,110 @@
+name: Schedule a release and draft notes for function app
+on:
+  workflow_dispatch:
+  schedule:
+     - cron: "0 0 * * 3"
+
+env:
+  RELEASEPREFIX: auditlogfa-
+  VERSIONPREFIX: v
+  REPOSITORY: altinn/altinn-auth-audit-log
+
+jobs:     
+  getlatestrelease:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+      issues: write
+      packages: write
+
+    steps:
+      - name: Get latest version for function app
+        uses: oprypin/find-latest-tag@v1
+        continue-on-error: true
+        with:
+          repository: ${{ env.REPOSITORY }}
+          releases-only: true
+          prefix: ${{ env.RELEASEPREFIX }} ${{ env.VERSIONPREFIX }}  # Other kinds of tags are irrelevant;
+        id: auditlogfa_version
+      - name: print status
+        run: "echo Release version '${{ steps.auditlogfa_version.outputs.tag }}'"
+      - name: setup current year
+        id: get_year
+        run: |
+          echo "currentyear=$(date +%Y)" >> $GITHUB_ENV
+
+      - name: split release version f.ex auditlogfa-v2023.1 will be split into output0 auditlogfa and output1 v2023.1
+        if: ${{ steps.auditlogfa_version.outcome == 'success' }}
+        uses: winterjung/split@v2
+        id: splitprefix
+        with:
+          msg: "${{ steps.auditlogfa_version.outputs.tag }}"
+          separator: '-'
+     
+      - name: split release version f.ex v2023.1 will be split into output0 v2023 and output1 1
+        if: ${{ steps.auditlogfa_version.outcome == 'success' }}
+        uses: winterjung/split@v2
+        id: split
+        with:
+          msg: "${{ steps.splitprefix.outputs._1 }}"
+          separator: '.'
+          
+      - name: split 'v' and year f.ex v2023 will be split into output0 v and output1 2023
+        if: ${{ steps.auditlogfa_version.outcome == 'success' }}
+        uses: winterjung/split@v2
+        id: splitv
+        with:
+          msg: "${{steps.split.outputs._0}}"
+          separator: 'v'
+          
+      - name: Increment release version f.ex the release version for the year is incremented
+        if: ${{ steps.auditlogfa_version.outcome == 'success' }}
+        id: update_version
+        env:
+          NUM: ${{ steps.split.outputs._1 }}
+        run: |
+          echo "VERSION=$(($NUM + 1))" >> $GITHUB_ENV
+          
+      - name: Format new release version when there is atleast 1 previous release. If the release is created in the new year, the current year is set and the identity is reset to 1.
+        if: ${{ steps.auditlogfa_version.outcome == 'success' }}
+        id: format_version
+        env:
+          RELEASE_YEAR: ${{steps.splitv.outputs._1}}
+        run: |
+          if [ ${{ env.currentyear }} -gt  ${{ env.RELEASE_YEAR }} ]
+          then
+             echo "RELEASEVERSION=${{ env.VERSIONPREFIX }}${{ env.currentyear }}.1" >> $GITHUB_OUTPUT
+          else
+             echo "RELEASEVERSION=${{ env.VERSIONPREFIX }}${{ env.RELEASE_YEAR }}.${{ env.VERSION }}" >> $GITHUB_OUTPUT
+          fi
+    
+      - name: Set release version if 0 releases. The initial version is set to the v{currentyear}.{identity} f.ex v2023.1
+        id: releaseversion
+        run: |
+          if [ ${{ steps.auditlogfa_version.outcome }} = 'success' ]
+          then
+            echo "RELEASE=${{ env.RELEASEPREFIX }}${{ steps.format_version.outputs.RELEASEVERSION }}" >> $GITHUB_OUTPUT
+          else
+            echo "RELEASE=${{ env.RELEASEPREFIX }} ${{ env.VERSIONPREFIX }} ${{ env.currentyear }}.1" >> $GITHUB_OUTPUT
+          fi
+    outputs:
+      RELEASEVERSION: ${{ steps.releaseversion.outputs.RELEASE }}
+
+  update_release_draft:
+    name: Release Drafter with releaseversion that was formatted
+    needs: [getlatestrelease]
+    permissions:
+      contents: write  # for release-drafter/release-drafter to create a github release
+      pull-requests: write  # for release-drafter/release-drafter to add label to PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      # Drafts your next Release notes as Pull Requests are merged into "master"
+      - uses: release-drafter/release-drafter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag: ${{ needs.getlatestrelease.outputs.RELEASEVERSION }}
+          version: ${{ needs.getlatestrelease.outputs.RELEASEVERSION }}
+    
