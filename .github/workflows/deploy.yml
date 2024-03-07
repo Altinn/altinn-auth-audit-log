@@ -1,16 +1,7 @@
-name: Deploy to TT02 and Production
+run-name: Deploy version ${{ github.event.release.tag_name }} to TT02 and Production
 on:
   release:
-    types: [published]
-  workflow_dispatch:
-    inputs:
-      environment:
-        type: environment
-        description: Select the environment
-      version:
-        type: string
-        description: Enter the package version
-        required: true
+    types: [released]
           
 env:
   REGISTRY: ghcr.io
@@ -26,12 +17,6 @@ jobs:
       contents: read
       packages: read
     steps:
-    - name: Log in to the Container registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     - name: Azure Login
       uses: azure/login@v1
       with:
@@ -49,24 +34,16 @@ jobs:
             --container-name ${{ env.CONTAINER_APP_CONTAINER_NAME }} \
             --resource-group ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }} \
             --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-    - name: logout
-      run: >
-        az logout
 
   deploy-prod:
     environment: PROD
     runs-on: ubuntu-latest
+    needs: deploy-tt02
     permissions:
         id-token: write
         contents: read
         packages: read
     steps:
-    - name: Log in to the Container registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     - name: Azure Login
       uses: azure/login@v1
       with:
@@ -84,6 +61,3 @@ jobs:
             --container-name ${{ env.CONTAINER_APP_CONTAINER_NAME }} \
             --resource-group ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }} \
             --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-    - name: logout
-      run: >
-        az logout
