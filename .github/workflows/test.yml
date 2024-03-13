@@ -42,6 +42,8 @@ jobs:
     name: Deploy to ${{ matrix.environment }}
     runs-on: ubuntu-latest
     environment: ${{ matrix.environment }}
+    needs:
+      - build-fa
 
     strategy:
       matrix:
@@ -51,6 +53,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Download built function-app
+        uses: actions/download-artifact@v4
+        with:
+          name: function-app
+          path: ./artifacts/function-app
 
       - name: Azure Login
         uses: azure/login@v2
@@ -67,6 +75,7 @@ jobs:
           resource-group: ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }}
           container-app: ${{ vars.CONTAINER_APP_NAME }}
           function-app: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
+          function-app-path: ./artifacts/function-app
 
   # deploy-to-prod:
   #   name: Deploy to AT22
