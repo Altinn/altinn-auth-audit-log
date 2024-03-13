@@ -13,7 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Test
-      run: echo "Test"
+      run: echo "$ENVIRONMENT"
+      env:
+        ENVIRONMENT: ${{ github.event.inputs.environment }}
 #   deploy-tt02:
 #     environment: TT02
 #     runs-on: ubuntu-latest
