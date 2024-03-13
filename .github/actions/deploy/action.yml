@@ -21,19 +21,16 @@ inputs:
     default: auditlog
   resource-group:
     description: "The name of the resource group in Azure"
-    required: false
+    required: true
     type: string
-    default: ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }}
   container-app:
     description: "The name of the containerapp in Azure"
-    required: false
+    required: true
     type: string
-    default: ${{ vars.CONTAINER_APP_NAME }}
   function-app:
     description: "The name of the functionapp in Azure"
-    required: false
+    required: true
     type: string
-    default: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
 
 runs:
   using: "composite"
