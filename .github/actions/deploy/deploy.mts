@@ -16,7 +16,7 @@ for (let i = 0; i < 15; i++) {
   }
 
   const healthState = await getRevisionHealthState(latestRevision);
-  console.log(`revision health state: ${chalk.cyan(healthState)}`);
+  console.log(`revision health state: ${healthStateDisplay(healthState)}`);
   if (healthState === 'Healthy') {
     console.log('Health state is healthy');
     healthy = true;
@@ -50,4 +50,15 @@ async function getRevisionHealthState(revisionName: string) {
     --revision ${revisionName}`.quiet();
   const parsed = JSON.parse(output.stdout);
   return parsed.properties.healthState;
+}
+
+function healthStateDisplay(state: string) {
+  switch (state) {
+    case 'Healthy':
+      return chalk.green(state);
+    case 'Unhealthy':
+      return chalk.red(state);
+    default:
+      return chalk.cyan(state);
+  }
 }
