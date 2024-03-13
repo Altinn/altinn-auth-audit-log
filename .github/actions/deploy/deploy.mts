@@ -9,7 +9,12 @@ const latestRevision = await updateContainerImage();
 console.log(`new revision: ${chalk.cyan(latestRevision)}`);
 
 let healthy = false;
-for (let i = 0; i < 5; i++) {
+for (let i = 0; i < 15; i++) {
+  if (i > 0) {
+    console.log(`Not healty yet (${i}), waiting 30 seconds...`);
+    await new Promise((resolve) => setTimeout(resolve, 30_000));
+  }
+
   const healthState = await getRevisionHealthState(latestRevision);
   console.log(`revision health state: ${chalk.cyan(healthState)}`);
   if (healthState === 'Healthy') {
@@ -17,9 +22,6 @@ for (let i = 0; i < 5; i++) {
     healthy = true;
     break;
   }
-
-  console.log(`Not healty yet (${i}), waiting 30 seconds...`);
-  await new Promise((resolve) => setTimeout(resolve, 30_000));
 }
 
 if (!healthy) {
