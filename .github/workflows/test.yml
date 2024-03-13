@@ -1,10 +1,12 @@
 name: Test
 
 on:
-  push: {}
+  push:
+    branches:
+      - infra/testings
 
 jobs:
   test:
     uses: ./.github/workflows/_deploy.yml
     with:
-      name: Test Call
+      environment: TT02

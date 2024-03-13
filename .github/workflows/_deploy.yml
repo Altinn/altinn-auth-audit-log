@@ -2,9 +2,14 @@ name: Deploy
 
 on:
   workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
 
 jobs:
   test-test:
+    name: Test Test
     runs-on: ubuntu-latest
     steps:
     - name: Test
