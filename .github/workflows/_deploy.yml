@@ -15,7 +15,7 @@ jobs:
     - name: Test
       run: echo "$ENVIRONMENT"
       env:
-        ENVIRONMENT: ${{ github.event.inputs.environment }}
+        ENVIRONMENT: ${{ inputs.environment }}
 #   deploy-tt02:
 #     environment: TT02
 #     runs-on: ubuntu-latest
