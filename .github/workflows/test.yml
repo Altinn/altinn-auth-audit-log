@@ -5,6 +5,11 @@ on:
     branches:
       - infra/testings
 
+permissions:
+  id-token: write
+  contents: read
+  packages: read
+
 jobs:
   deploy-to-at21:
     name: Deploy to AT21
