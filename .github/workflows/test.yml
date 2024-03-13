@@ -5,12 +5,39 @@ on:
     branches:
       - infra/testings
 
+env:
+  FA_DOTNET_VERSION: '8.0.x'
+
 permissions:
   id-token: write
   contents: read
   packages: read
 
 jobs:
+  build-fa:
+    name: Build function app
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.FA_DOTNET_VERSION }}
+
+      - name: Build function app
+        shell: bash
+        working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
+        run: dotnet build --configuration Release --output ./output
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: function-app
+          path: ./src/Functions/Altinn.Auth.AuditLog.Functions/output
+
   deploy:
     name: Deploy to ${{ matrix.environment }}
     runs-on: ubuntu-latest
