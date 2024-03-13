@@ -1,0 +1,10 @@
+name: Test
+
+on:
+  push: {}
+
+jobs:
+  test:
+    uses: ./.github/actions/deploy.yml
+    with:
+      name: Test Call
