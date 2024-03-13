@@ -46,4 +46,5 @@ runs:
         CONTAINER_NAME: ${{ inputs.container-name }}
         RESOURCE_GROUP: ${{ inputs.resource-group }}
         IMAGE: ${{ inputs.image-name }}:${{ inputs.image-tag }}
+        FORCE_COLOR: '2'
       run: deno run -A ./.github/actions/deploy/deploy.mts

@@ -6,12 +6,12 @@ const resourceGroup = Deno.env.get('RESOURCE_GROUP');
 const image = Deno.env.get('IMAGE');
 
 const latestRevision = await updateContainerImage();
-console.log(`latestRevision: ${chalk.cyan(latestRevision)}`);
+console.log(`new revision: ${chalk.cyan(latestRevision)}`);
 
 let healthy = false;
 for (let i = 0; i < 5; i++) {
   const healthState = await getRevisionHealthState(latestRevision);
-  console.log(`healthState: ${chalk.cyan(healthState)}`);
+  console.log(`revision health state: ${chalk.cyan(healthState)}`);
   if (healthState === 'Healthy') {
     console.log('Health state is healthy');
     healthy = true;
@@ -28,11 +28,14 @@ if (!healthy) {
 }
 
 async function updateContainerImage() {
+  console.log(`Updating container image to ${chalk.cyan(image)}...`);
   const output = await $`az containerapp update \
     --name ${containerAppName} \
     --resource-group ${resourceGroup} \
     --container-name ${containerName} \
     --image ${image}`.quiet();
+  console.log('Done.');
+
   const parsed = JSON.parse(output.stdout);
   // console.log(parsed);
   return parsed.properties.latestRevisionName;
