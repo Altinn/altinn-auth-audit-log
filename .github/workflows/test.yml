@@ -36,7 +36,7 @@ jobs:
         name: Deploy
         with:
           # image-tag: ${{ github.sha }}
-          image-tag: eab7f9ac319ae8de4158f67e40f659ba5e39a014
+          image-tag: 7901558da421cb8e9f12a1c85d34ea627bb91a37
           resource-group: ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }}
           container-app: ${{ vars.CONTAINER_APP_NAME }}
           function-app: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
