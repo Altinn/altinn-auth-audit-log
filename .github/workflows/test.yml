@@ -5,6 +5,6 @@ on:
 
 jobs:
   test:
-    uses: ./.github/actions/deploy.yml
+    uses: ./.github/workflows/_deploy.yml
     with:
       name: Test Call
