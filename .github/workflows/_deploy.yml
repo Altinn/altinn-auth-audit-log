@@ -8,8 +8,8 @@ on:
         type: string
 
 jobs:
-  test-test:
-    name: Test Test
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
     runs-on: ubuntu-latest
     steps:
     - name: Test

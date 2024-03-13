@@ -6,7 +6,8 @@ on:
       - infra/testings
 
 jobs:
-  test:
+  deploy-to-tt02:
+    name: Deploy to TT02
     uses: ./.github/workflows/_deploy.yml
     with:
       environment: TT02
