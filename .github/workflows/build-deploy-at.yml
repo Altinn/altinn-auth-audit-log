@@ -1,12 +1,14 @@
-name: Test
-
+name: Build and publish to AT environments
 on:
   push:
-    branches:
-      - infra/testings
+    branches: [main]
+    paths-ignore:
+      - "src/test/k6/**"
+      - ".github/**"
+  workflow_dispatch:
 
 env:
-  FA_DOTNET_VERSION: '8.0.x'
+  DOTNET_VERSION: '8.0.x'
 
 jobs:
   build:
@@ -24,7 +26,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: ${{ env.FA_DOTNET_VERSION }}
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Build function app
         shell: bash
@@ -67,8 +69,7 @@ jobs:
 
     strategy:
       matrix:
-        # environment: [AT21, AT22, AT23, AT24]
-        environment: [AT24]
+        environment: [AT21, AT22, AT23, AT24]
 
     steps:
       - name: Checkout
@@ -90,36 +91,8 @@ jobs:
       - uses: ./.github/actions/deploy
         name: Deploy
         with:
-          # image-tag: ${{ github.sha }}
-          image-tag: eab7f9ac319ae8de4158f67e40f659ba5e39a014
+          image-tag: ${{ github.sha }}
           resource-group: ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }}
           container-app: ${{ vars.CONTAINER_APP_NAME }}
           function-app: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
           function-app-path: ./artifacts/function-app
-
-  # deploy-to-prod:
-  #   name: Deploy to AT22
-  #   runs-on: ubuntu-latest
-  #   environment: AT22
-
-  #   needs:
-  #     - deploy
-
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
-
-  #     - name: Azure Login
-  #       uses: azure/login@v1
-  #       with:
-  #         client-id: ${{ secrets.AZURE_CLIENT_ID }}
-  #         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-  #         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-  #     - uses: ./.github/actions/deploy
-  #       name: Deploy
-  #       with:
-  #         image-tag: ${{ github.sha }}
-  #         resource-group: ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }}
-  #         container-app: ${{ vars.CONTAINER_APP_NAME }}
-  #         function-app: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
