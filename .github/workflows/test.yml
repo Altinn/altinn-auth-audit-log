@@ -7,7 +7,14 @@ on:
 
 jobs:
   deploy-to-tt02:
-    name: Deploy to TT02
-    uses: ./.github/workflows/_deploy.yml
-    with:
-      environment: TT02
+    runs-on: ubuntu-latest
+    environment: AT21
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: ./.github/actions/deploy
+        with:
+          environment: AT21
+          tag: ${{ github.sha }}

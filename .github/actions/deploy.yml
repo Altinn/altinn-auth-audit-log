@@ -1,0 +1,75 @@
+name: "Deploy audit-log to environment"
+description: "Deploy audit-log to a given environment"
+inputs:
+  environment:
+    description: "The environment to deploy to"
+    required: true
+    type: string
+  image-name:
+    description: "The name of the image to deploy"
+    required: false
+    type: string
+    default: ghcr.io/altinn/altinn-auth-audit-log
+  image-tag:
+    description: "The tag of the image to deploy"
+    required: true
+    type: string
+  container-name:
+    description: "The name of the container in the containerapp"
+    required: false
+    type: string
+    default: auditlog
+  resource-group:
+    description: "The name of the resource group in Azure"
+    required: false
+    type: string
+    default: ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }}
+  container-app:
+    description: "The name of the containerapp in Azure"
+    required: false
+    type: string
+    default: ${{ vars.CONTAINER_APP_NAME }}
+  function-app:
+    description: "The name of the functionapp in Azure"
+    required: false
+    type: string
+    default: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+# env:
+#   REGISTRY: ghcr.io
+#   IMAGE_NAME: altinn/altinn-auth-audit-log:${{ github.event.release.tag_name }}
+#   CONTAINER_APP_CONTAINER_NAME: auditlog
+#   deploy-tt02:
+#     environment: TT02
+#     runs-on: ubuntu-latest
+#     permissions:
+#       id-token: write
+#       contents: read
+#       packages: read
+#     steps:
+#     - name: Azure Login
+#       uses: azure/login@v1
+#       with:
+#         client-id: ${{ secrets.AZURE_CLIENT_ID }}
+#         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+#         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+#     - name: Deploy to containerapp
+#       uses: azure/CLI@v1
+#       with:
+#         inlineScript: >
+#           az config set extension.use_dynamic_install=yes_without_prompt
+
+#           az containerapp update \
+#             --name ${{ vars.CONTAINER_APP_NAME }} \
+#             --container-name ${{ env.CONTAINER_APP_CONTAINER_NAME }} \
+#             --resource-group ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }} \
+#             --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
