@@ -8,15 +8,14 @@ on:
 env:
   FA_DOTNET_VERSION: '8.0.x'
 
-permissions:
-  id-token: write
-  contents: read
-  packages: read
-
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout
@@ -60,6 +59,11 @@ jobs:
     environment: ${{ matrix.environment }}
     needs:
       - build
+
+    permissions:
+      id-token: write
+      contents: read
+      packages: read
 
     strategy:
       matrix:
