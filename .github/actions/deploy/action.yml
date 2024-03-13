@@ -37,6 +37,7 @@ runs:
   steps:
     - name: Test
       run: az account show
+      shell: bash
 # env:
 #   REGISTRY: ghcr.io
 #   IMAGE_NAME: altinn/altinn-auth-audit-log:${{ github.event.release.tag_name }}
