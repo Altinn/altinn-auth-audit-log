@@ -1,10 +1,6 @@
 name: "Deploy audit-log to environment"
 description: "Deploy audit-log to a given environment"
 inputs:
-  environment:
-    description: "The environment to deploy to"
-    required: true
-    type: string
   image-name:
     description: "The name of the image to deploy"
     required: false
