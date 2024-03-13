@@ -6,15 +6,9 @@ on:
       - infra/testings
 
 jobs:
-  deploy-to-tt02:
-    runs-on: ubuntu-latest
-    environment: AT21
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - uses: ./.github/actions/deploy
-        with:
-          environment: AT21
-          tag: ${{ github.sha }}
+  deploy-to-at21:
+    name: Deploy to AT21
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: AT21
+      image-tag: ${{ github.sha }}
