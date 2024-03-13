@@ -34,6 +34,20 @@ runs:
     - name: Test
       run: az account show
       shell: bash
+
+    - name: Deploy Image to ContainerApp
+      shell: bash
+      env:
+        NAME: ${{ inputs.container-app }}
+        CONTAINER_NAME: ${{ inputs.container-name }}
+        RESOURCE_GROUP: ${{ inputs.resource-group }}
+        IMAGE: ${{ inputs.image-name }}:${{ inputs.image-tag }}
+      run: |
+        az containerapp update \
+          --name $NAME \
+          --container-name $CONTAINER_NAME \
+          --resource-group $RESOURCE_GROUP \
+          --image $IMAGE
 # env:
 #   REGISTRY: ghcr.io
 #   IMAGE_NAME: altinn/altinn-auth-audit-log:${{ github.event.release.tag_name }}
