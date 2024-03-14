@@ -18,7 +18,7 @@ namespace Altinn.Auth.AuditLog.Functions.Models
         /// <summary>
         /// Date, time of the authorization event. Set by producer of logevents
         /// </summary>
-        public DateTime Created { get; set; }
+        public DateTimeOffset Created { get; set; }
 
         /// <summary>
         /// The userid for the user that requested authorization
