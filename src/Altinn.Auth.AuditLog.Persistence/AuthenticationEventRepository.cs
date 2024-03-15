@@ -18,7 +18,7 @@ namespace Altinn.Auth.AuditLog.Persistence
     public class AuthenticationEventRepository : IAuthenticationEventRepository
     {
         private readonly ILogger _logger;
-        private readonly NpgsqlDataSource _dataSource;        
+        private readonly NpgsqlDataSource _dataSource;       
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthenticationEventRepository"/> class
@@ -30,7 +30,7 @@ namespace Altinn.Auth.AuditLog.Persistence
             ILogger<AuthenticationEventRepository> logger) 
         {
             _dataSource = dataSource;
-            _logger = logger;                                 
+            _logger = logger;       
         }
 
         public async Task InsertAuthenticationEvent(AuthenticationEvent authenticationEvent)
@@ -81,7 +81,7 @@ namespace Altinn.Auth.AuditLog.Persistence
                 pgcom.Parameters.AddWithValue("externalsessionid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.ExternalSessionId) ? DBNull.Value : authenticationEvent.ExternalSessionId);
                 pgcom.Parameters.AddWithValue("subscriptionkey", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.SubscriptionKey) ? DBNull.Value : authenticationEvent.SubscriptionKey);
                 pgcom.Parameters.AddWithValue("externaltokenissuer", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.ExternalTokenIssuer) ? DBNull.Value : authenticationEvent.ExternalTokenIssuer);
-                pgcom.Parameters.AddWithValue("created", NpgsqlTypes.NpgsqlDbType.TimestampTz, authenticationEvent.Created.ToOffset(TimeSpan.Zero));
+                pgcom.Parameters.AddWithValue("created", NpgsqlTypes.NpgsqlDbType.TimestampTz, (authenticationEvent.Created.HasValue) ? authenticationEvent.Created?.ToOffset(TimeSpan.Zero) : DateTimeOffset.MinValue);
                 pgcom.Parameters.AddWithValue("userid", NpgsqlTypes.NpgsqlDbType.Integer, (authenticationEvent.UserId == null) ? DBNull.Value : authenticationEvent.UserId);
                 pgcom.Parameters.AddWithValue("supplierid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.SupplierId) ? DBNull.Value : authenticationEvent.SupplierId);
                 pgcom.Parameters.AddWithValue("orgnumber", NpgsqlTypes.NpgsqlDbType.Integer, (authenticationEvent.OrgNumber == null) ? DBNull.Value : authenticationEvent.OrgNumber);

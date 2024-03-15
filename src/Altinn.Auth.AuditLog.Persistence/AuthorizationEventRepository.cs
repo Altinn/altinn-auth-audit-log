@@ -21,7 +21,7 @@ namespace Altinn.Auth.AuditLog.Persistence
     {
         private readonly ILogger _logger;
         private readonly NpgsqlDataSource _dataSource;
-      
+
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthorizationEventRepository"/> class
         /// </summary>
@@ -33,7 +33,6 @@ namespace Altinn.Auth.AuditLog.Persistence
         {
             _dataSource = dataSource;
             _logger = logger;
-                                   
         }
 
         public async Task InsertAuthorizationEvent(AuthorizationEvent authorizationEvent)
@@ -80,7 +79,7 @@ namespace Altinn.Auth.AuditLog.Persistence
             {
                 await using NpgsqlCommand pgcom = _dataSource.CreateCommand(INSERTAUTHZEVENT);
                 pgcom.Parameters.AddWithValue("sessionid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.SessionId) ? DBNull.Value : authorizationEvent.SessionId);
-                pgcom.Parameters.AddWithValue("created", NpgsqlTypes.NpgsqlDbType.TimestampTz, authorizationEvent.Created.ToOffset(TimeSpan.Zero));
+                pgcom.Parameters.AddWithValue("created", NpgsqlTypes.NpgsqlDbType.TimestampTz, (authorizationEvent.Created.HasValue) ? authorizationEvent.Created?.ToOffset(TimeSpan.Zero) : DateTimeOffset.MinValue);
                 pgcom.Parameters.AddWithValue("subjectuserid", NpgsqlTypes.NpgsqlDbType.Integer, (authorizationEvent.SubjectUserId == null) ? DBNull.Value : authorizationEvent.SubjectUserId);
                 pgcom.Parameters.AddWithValue("subjectorgcode", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.SubjectOrgCode) ? DBNull.Value : authorizationEvent.SubjectOrgCode);
                 pgcom.Parameters.AddWithValue("subjectorgnumber", NpgsqlTypes.NpgsqlDbType.Integer, (authorizationEvent.SubjectOrgNumber == null) ? DBNull.Value : authorizationEvent.SubjectOrgNumber);
