@@ -11,7 +11,7 @@ inputs:
     required: false
     type: string
     default: altinn/altinn-auth-audit-log
-  image_tag:
+  image-tag:
     description: "The image tag"
     required: true
     type: string
@@ -38,7 +38,7 @@ runs:
     - name: Add Version tag to Docker Image
       uses: shrink/actions-docker-registry-tag@v4
       with:
-        registry: ${{ inputs.registry_name }}
-        repository: '${{ inputs.repository_name }}'
-        target: ${{ inputs.image_tag }}
+        registry: ${{ inputs.registry-name }}
+        repository: '${{ inputs.repository-name }}'
+        target: ${{ inputs.image-tag }}
         tags: ${{ steps.get_version_number.outputs.RELEASE_VERSION }}
