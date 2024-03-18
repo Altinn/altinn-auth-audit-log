@@ -1,0 +1,22 @@
+name: Schedule release
+on:
+  push:
+    branches: [infrastructure/deploy-post-release]
+    paths-ignore:
+      - "src/test/k6/**"
+      - ".github/**"
+  workflow_dispatch:
+
+jobs:
+  releaseversion:
+    name: releaseversion
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Release
+        uses: ./.github/actions/release
+        
