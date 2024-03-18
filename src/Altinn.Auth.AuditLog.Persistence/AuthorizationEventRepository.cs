@@ -77,7 +77,17 @@ namespace Altinn.Auth.AuditLog.Persistence
 
             if (!authorizationEvent.Created.HasValue)
             {
-                throw new ArgumentNullException(nameof(authorizationEvent.Created));
+                throw new ArgumentNullException(nameof(authorizationEvent), "Created must not be null");
+            }
+
+            if (string.IsNullOrEmpty(authorizationEvent.Operation))
+            {
+                throw new ArgumentNullException(nameof(authorizationEvent), "Operation must not be null or empty");
+            }
+
+            if (string.IsNullOrEmpty(authorizationEvent.ContextRequestJson))
+            {
+                throw new ArgumentNullException(nameof(authorizationEvent), "Context request must not be null or empty");
             }
 
             try
