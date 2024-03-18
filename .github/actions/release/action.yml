@@ -12,7 +12,7 @@ inputs:
     type: string
     default: altinn/altinn-auth-audit-log
   image_tag:
-    description: "The name of the repository"
+    description: "The image tag"
     required: true
     type: string
   
@@ -40,4 +40,4 @@ runs:
         registry: ${{ inputs.registry_name }}
         repository: '${{ inputs.repository_name }}'
         target: ${{ inputs.image_tag }}
-        tags: ${{ needs.get_version_number.outputs.RELEASE_VERSION }}
+        tags: ${{ steps.get_version_number.outputs.RELEASE_VERSION }}
