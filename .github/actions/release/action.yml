@@ -1,0 +1,13 @@
+name: "Schedule a release draft"
+description: "Schedule a release draft every wednesday at 00:00 with version as date"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: denoland/setup-deno@v1
+      with:
+        deno-version: v1.x
+
+    - name: Get version number
+      shell: bash
+      run: deno run -A ./.github/actions/release/releaseversioning.mts
