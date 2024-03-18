@@ -10,4 +10,4 @@ runs:
 
     - name: Get version number
       shell: bash
-      run: deno run -A ./.github/actions/release/releaseversioning.mts
+      run: deno run -A ./.github/actions/release/releaseversion.mts
