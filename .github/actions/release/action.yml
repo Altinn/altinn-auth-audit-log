@@ -16,6 +16,10 @@ inputs:
     required: true
     type: string
     default: cee42f683dfefdd92970de39e465a3121e74a96d
+  github-token:
+    description: "The github token"
+    required: true
+    type: string
   
 runs:
   using: "composite"
@@ -46,7 +50,7 @@ runs:
     # Drafts your next Release notes as Pull Requests are merged into "master"
     - uses: release-drafter/release-drafter@v6
       env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ inputs.github-token }}
       with:
           tag: ${{ steps.get_version_number.outputs.RELEASE_VERSION }}
           version: ${{ steps.get_version_number.outputs.RELEASE_VERSION }}
