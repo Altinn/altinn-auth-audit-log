@@ -1,11 +1,8 @@
-using System;
+using Altinn.Auth.AuditLog.Core.Models;
+using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
+using Microsoft.Azure.Functions.Worker;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
-using Altinn.Auth.AuditLog.Functions.Models;
-using Azure.Storage.Queues.Models;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Extensions.Logging;
 
 namespace Altinn.Auth.AuditLog.Functions
 {

@@ -1,14 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Altinn.Auth.AuditLog.Functions.Models;
 using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Resources;
-using Action = Altinn.Auth.AuditLog.Functions.Models.Action;
-using Resources = Altinn.Auth.AuditLog.Functions.Models.Resource;
-using Attribute = Altinn.Auth.AuditLog.Functions.Models.Attribute;
+using Action = Altinn.Auth.AuditLog.Core.Models.Action;
+using Resources = Altinn.Auth.AuditLog.Core.Models.Resource;
+using Attribute = Altinn.Auth.AuditLog.Core.Models.Attribute;
+using Altinn.Auth.AuditLog.Core.Models;
 
 namespace Altinn.Auth.AuditLog.Functions.Tests.Utils
 {

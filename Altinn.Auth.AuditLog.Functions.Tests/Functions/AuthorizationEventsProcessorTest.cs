@@ -1,5 +1,5 @@
-﻿using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
-using Altinn.Auth.AuditLog.Functions.Models;
+using Altinn.Auth.AuditLog.Core.Models;
+using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
 using Altinn.Auth.AuditLog.Functions.Tests.Helpers;
 using Altinn.Auth.AuditLog.Functions.Tests.Utils;
 using Azure.Messaging;

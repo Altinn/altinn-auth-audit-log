@@ -1,8 +1,8 @@
-﻿using Altinn.Auth.AuditLog.Functions.Clients;
+using Altinn.Auth.AuditLog.Core.Enum;
+using Altinn.Auth.AuditLog.Core.Models;
+using Altinn.Auth.AuditLog.Functions.Clients;
 using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
 using Altinn.Auth.AuditLog.Functions.Configuration;
-using Altinn.Auth.AuditLog.Functions.Enum;
-using Altinn.Auth.AuditLog.Functions.Models;
 using Altinn.Auth.AuditLog.Functions.Tests.Helpers;
 using Azure.Messaging;
 using Microsoft.Extensions.Logging;
@@ -30,7 +30,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
         {
             UserId = 20000003,
             Created = DateTime.UtcNow,
-            AuthenticationMethod = Enum.AuthenticationMethod.BankID,
+            AuthenticationMethod = AuthenticationMethod.BankID,
             EventType = AuthenticationEventType.Authenticate,
             AuthenticationLevel = SecurityLevel.VerySensitive,
         };
