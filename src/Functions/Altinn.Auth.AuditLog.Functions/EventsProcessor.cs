@@ -3,9 +3,9 @@ using Azure.Messaging;
 using System.Text.Json;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using Altinn.Auth.AuditLog.Functions.Models;
 using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
 using System.Text.Json.Serialization;
+using Altinn.Auth.AuditLog.Core.Models;
 
 namespace Altinn.Auth.AuditLog.Functions
 {

@@ -1,10 +1,4 @@
-﻿using Altinn.Auth.AuditLog.Functions.Models;
-using Azure.Messaging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Altinn.Auth.AuditLog.Core.Models;
 
 namespace Altinn.Auth.AuditLog.Functions.Clients.Interfaces
 {

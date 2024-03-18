@@ -47,7 +47,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
         {
             AuthenticationEvent authenticationEvent = new AuthenticationEvent()
             {                
-                Created = new DateTime(2018, 05, 15, 02, 05, 00),
+                Created = new DateTimeOffset(2018, 05, 15, 02, 05, 00, TimeSpan.Zero),
                 UserId = 20000003,
                 AuthenticationMethod = AuthenticationMethod.BankID,
                 EventType = AuthenticationEventType.Authenticate,
