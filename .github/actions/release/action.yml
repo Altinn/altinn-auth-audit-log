@@ -28,7 +28,7 @@ runs:
       shell: bash
       run: |
         deno run -A ./.github/actions/release/releaseversion.mts
-        echo ::set-output name=RELEASE_VERSION::$(deno run -A ./.github/actions/release/releaseversion.mts)
+        echo "RELEASE_VERSION=$(deno run -A ./.github/actions/release/releaseversion.mts)" >> $GITHUB_OUTPUT
     
     - name: print version
       shell: bash
