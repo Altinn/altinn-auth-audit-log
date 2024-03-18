@@ -18,6 +18,4 @@ jobs:
         uses: actions/checkout@v4
       - name: Release
         uses: ./.github/actions/release
-        with: 
-          image_tag: ${{ github.sha}}
   

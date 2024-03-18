@@ -122,7 +122,7 @@ jobs:
         uses: octokit/request-action@v2.x
         id: get_package_versions
         with:
-          route: GET /user/packages/container/altinn-access-management-frontend/versions
+          route: GET /user/packages/container/altinn-auth-audit-log/versions
           mediaType: | # The | is significant!
             format: raw
         env:

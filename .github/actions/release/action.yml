@@ -15,6 +15,7 @@ inputs:
     description: "The image tag"
     required: true
     type: string
+    default: cee42f683dfefdd92970de39e465a3121e74a96d
   
 runs:
   using: "composite"
