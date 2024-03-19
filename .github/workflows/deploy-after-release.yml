@@ -70,7 +70,7 @@ jobs:
       - uses: ./.github/actions/deploy
         name: Deploy
         with:
-          image-tag: ${{ github.ref }}
+          image-tag: ${{ github.sha }}
           resource-group: ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }}
           container-app: ${{ vars.CONTAINER_APP_NAME }}
           function-app: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
@@ -81,7 +81,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           repository: '${{ env.REPOSITORY }}'
-          target: ${{ github.ref }}
+          target: ${{ github.sha }}
           tags: ${{ github.event.release.tag_name }}
 
   deploy-prod:
@@ -112,7 +112,7 @@ jobs:
       - uses: ./.github/actions/deploy
         name: Deploy
         with:
-          image-tag: ${{ github.ref }}
+          image-tag: ${{ github.sha }}
           resource-group: ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }}
           container-app: ${{ vars.CONTAINER_APP_NAME }}
           function-app: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
