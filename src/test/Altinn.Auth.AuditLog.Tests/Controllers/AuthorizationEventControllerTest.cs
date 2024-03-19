@@ -43,14 +43,14 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
         {
             string requestUri = "auditlog/api/v1/authorizationevent/";
             Mock<IAuthorizationEventRepository> authzEventRepository = new Mock<IAuthorizationEventRepository>();
-            authzEventRepository.Setup(q => q.InsertAuthorizationEvent(It.IsAny<AuthorizationEvent>())).Returns(Task.FromResult(GetAuthorizationEvent()));
+            authzEventRepository.Setup(q => q.InsertAuthorizationEvent(It.IsAny<AuthorizationEvent>())).Returns(Task.FromResult(GetAuthorizationEvent(true)));
 
             _client = SetupUtil.GetTestClient(_factory, authzEventRepository.Object);
             _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
-                Content = new StringContent(JsonSerializer.Serialize(GetAuthorizationEvent()), Encoding.UTF8, "application/json")
+                Content = new StringContent(JsonSerializer.Serialize(GetAuthorizationEvent(true)), Encoding.UTF8, "application/json")
             };
 
             httpRequestMessage.Headers.Add("Accept", "application/json");
@@ -87,7 +87,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
         }
 
         [Fact]
-        public async Task CreateAuthorizationEvent_Exception()
+        public async Task CreateAuthorizationEvent_Badrequest_created()
         {
             string requestUri = "auditlog/api/v1/authorizationevent/";
             Mock<IAuthorizationEventRepository> authzEventRepository = new Mock<IAuthorizationEventRepository>();
@@ -97,7 +97,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
-                Content = new StringContent(JsonSerializer.Serialize(GetAuthorizationEvent()), Encoding.UTF8, "application/json")
+                Content = new StringContent(JsonSerializer.Serialize(GetAuthorizationEvent(false)), Encoding.UTF8, "application/json")
             };
 
             httpRequestMessage.Headers.Add("Accept", "application/json");
@@ -105,13 +105,14 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
 
             HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
 
-            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
-        private AuthorizationEvent GetAuthorizationEvent()
+        private AuthorizationEvent GetAuthorizationEvent(bool isCreated)
         {
             AuthorizationEvent authorizationEvent = new AuthorizationEvent()
             {
+                Created = isCreated ? new DateTimeOffset(2018, 05, 15, 02, 05, 00, TimeSpan.Zero) : null,
                 SubjectUserId = 2000000,
                 ResourcePartyId = 1000,
                 Resource = "taxreport",

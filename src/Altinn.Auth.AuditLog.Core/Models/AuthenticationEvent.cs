@@ -27,9 +27,10 @@ namespace Altinn.Auth.AuditLog.Core.Models
         public string? ExternalTokenIssuer { get; set; }
 
         /// <summary>
-        /// Date, time of the authentication event. Set by producer of logevents
+        /// Date and time of the authentication event. Set by producer of logevents
         /// </summary>
-        public DateTime Created { get; set; }
+        [Required]
+        public DateTimeOffset? Created { get; set; }
 
         /// <summary>
         /// Id of the user that triggered that authentication event 
