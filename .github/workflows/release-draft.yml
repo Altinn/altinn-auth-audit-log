@@ -1,8 +1,10 @@
-name: Schedule release
+name: Schedule release and draft release notes
 on:
   push:
     branches: [infrastructure/deploy-post-release]
   workflow_dispatch:
+  schedule:
+      - cron: "0 0 * * 3"
 
 jobs:
   releaseversion:
