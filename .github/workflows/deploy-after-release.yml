@@ -5,6 +5,9 @@ on:
           
 env:
   DOTNET_VERSION: '8.0.x'
+  REGISTRY: ghcr.io
+  REPOSITORY: altinn/altinn-auth-audit-log
+
   
 jobs:
   build:
@@ -67,11 +70,19 @@ jobs:
       - uses: ./.github/actions/deploy
         name: Deploy
         with:
-          image-tag: ${{ github.sha }}
+          image-tag: ${{ github.ref }}
           resource-group: ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }}
           container-app: ${{ vars.CONTAINER_APP_NAME }}
           function-app: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
           function-app-path: ./artifacts/function-app
+      
+      - name: Add Version tag to Docker Image
+        uses: shrink/actions-docker-registry-tag@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          repository: '${{ env.REPOSITORY }}'
+          target: ${{ github.ref }}
+          tags: ${{ github.event.release.tag_name }}
 
   deploy-prod:
     environment: PROD
@@ -101,7 +112,7 @@ jobs:
       - uses: ./.github/actions/deploy
         name: Deploy
         with:
-          image-tag: ${{ github.sha }}
+          image-tag: ${{ github.ref }}
           resource-group: ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }}
           container-app: ${{ vars.CONTAINER_APP_NAME }}
           function-app: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
