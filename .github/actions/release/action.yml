@@ -1,0 +1,28 @@
+name: "Schedule a release draft"
+description: "Schedule a release draft every wednesday at 00:00 with version as date"
+inputs:
+  github-token:
+    description: "The github token"
+    required: true
+    type: string
+  
+runs:
+  using: "composite"
+  steps:
+    - uses: denoland/setup-deno@v1
+      with:
+        deno-version: v1.x
+
+    - name: Get version number
+      id: get_version_number
+      shell: bash
+      run: |
+        echo "RELEASE_VERSION=$(deno run -A ./.github/actions/release/releaseversion.mts)" >> $GITHUB_OUTPUT
+    
+    # Drafts your next Release notes as Pull Requests are merged into "master"
+    - uses: release-drafter/release-drafter@v6
+      env:
+          GITHUB_TOKEN: ${{ inputs.github-token }}
+      with:
+          tag: ${{ steps.get_version_number.outputs.RELEASE_VERSION }}
+          version: ${{ steps.get_version_number.outputs.RELEASE_VERSION }}
