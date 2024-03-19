@@ -1,10 +1,4 @@
-﻿using Altinn.Auth.AuditLog.Functions.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+using Altinn.Auth.AuditLog.Core.Models;
 
 namespace Altinn.Auth.AuditLog.Functions.Tests.Helpers
 {
@@ -15,6 +9,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Helpers
             AuthorizationEvent authorizationEvent = new AuthorizationEvent()
             {
                 SubjectUserId = 2000000,
+                Created = new DateTimeOffset(2018, 05, 15, 02, 05, 00, TimeSpan.Zero),
                 ResourcePartyId = 1000,
                 Resource = "taxreport",
                 InstanceId = "1000/26133fb5-a9f2-45d4-90b1-f6d93ad40713",

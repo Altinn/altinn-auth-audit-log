@@ -1,6 +1,6 @@
-﻿using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
-using Altinn.Auth.AuditLog.Functions.Enum;
-using Altinn.Auth.AuditLog.Functions.Models;
+using Altinn.Auth.AuditLog.Core.Enum;
+using Altinn.Auth.AuditLog.Core.Models;
+using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
 using Azure.Messaging;
 using Microsoft.Extensions.Logging;
 using Moq;

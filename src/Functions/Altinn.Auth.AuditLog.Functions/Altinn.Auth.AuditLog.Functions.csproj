@@ -18,6 +18,9 @@
     <PackageReference Include="Microsoft.Extensions.Azure" Version="1.7.2" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Altinn.Auth.AuditLog.Core\Altinn.Auth.AuditLog.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <None Update="host.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
