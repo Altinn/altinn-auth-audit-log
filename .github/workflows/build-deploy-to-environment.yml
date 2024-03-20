@@ -1,4 +1,4 @@
-name: Build and publish to a specific environments
+name: Manually build and publish to a specific environments
 on:
   workflow_dispatch:
     inputs:
