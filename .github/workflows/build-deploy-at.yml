@@ -51,6 +51,8 @@ jobs:
         with:
           push: true
           tags: ghcr.io/altinn/altinn-auth-audit-log:${{ github.sha }}
+          build-args: |
+            SOURCE_REVISION_ID=${{ github.sha }}
 
   deploy:
     name: Deploy to ${{ matrix.environment }}

@@ -26,6 +26,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Altinn.Auth.AuditLog.Core\Altinn.Auth.AuditLog.Core.csproj" />
     <ProjectReference Include="..\Altinn.Auth.AuditLog.Persistence\Altinn.Auth.AuditLog.Persistence.csproj" />
   </ItemGroup>
