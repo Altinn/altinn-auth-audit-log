@@ -1,8 +1,10 @@
-name: Build and publish to AT environments
+name: Manually build and publish to a specific environments
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+        environment:
+          type: environment
+          description: Select the environment
 
 env:
   DOTNET_VERSION: '8.0.x'
@@ -38,14 +40,14 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
+    
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
+    
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -53,9 +55,9 @@ jobs:
           tags: ghcr.io/altinn/altinn-auth-audit-log:${{ github.sha }}
 
   deploy:
-    name: Deploy to ${{ matrix.environment }}
+    name: Deploy to ${{ inputs.environment }}
     runs-on: ubuntu-latest
-    environment: ${{ matrix.environment }}
+    environment: ${{ inputs.environment }}
     needs:
       - build
 
@@ -63,10 +65,6 @@ jobs:
       id-token: write
       contents: read
       packages: read
-
-    strategy:
-      matrix:
-        environment: [AT21, AT22, AT23, AT24]
 
     steps:
       - name: Checkout
@@ -76,7 +74,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: function-app
-          path: ./artifacts/function-app
+          path: ./artifacts/function-app     
 
       - name: Azure Login
         uses: azure/login@v2

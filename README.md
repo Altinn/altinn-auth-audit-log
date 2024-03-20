@@ -27,7 +27,7 @@ The auditlog api maps the events to the database model and stores them in the da
 The events are stored in the postgres database.
 
 ## Technologies
-  - .NET 7.0
+  - .NET 8.0
   - Azure Storage Queue
   - Azure Function App V4
   - Azure Container App
@@ -112,15 +112,15 @@ Now, this message will be processed by the function app, sent to the auditlog ap
 pr-labeler action is triggered for each pull request. Based on the branch name, this action adds a label to the pull request. The configuration for the labels can be found here.
 
 ## Deploy
-### Auditlog Container application
-Code is continously integrated and deployed to all testing environments (AT environments). build-publish-deploy-via-ghcr is triggered when a pull request is merged into main branch. On each run, the code is built, packaged and published to Github Container registry as altinn-auth-audit-log. Each image is tagged with the github commit sha. The package is then deployed to an azure container app in testing environment. The environment variables, secrets for the action are setup in the repository settings.
+### Auditlog Container application / function application
+Code is continously integrated and deployed to all testing environments (AT environments). [build-deploy-at](https://github.com/Altinn/altinn-auth-audit-log/blob/main/.github/workflows/build-deploy-at.yml) is triggered when a pull request is merged into main branch. On each run, the code is built, packaged and published to Github Container registry as altinn-auth-audit-log. Each image is tagged with the github commit sha. The package is then deployed to an azure container app in testing environment. The environment variables, secrets for the action are setup in the repository settings.
 
 ### Auditlog Function Application
 Code is continously integrated and deployed to all testing environments (AT environments). The code from the main branch is published to the function app in different environments. In the future, the function app will also be containerized.
 
 ## Release
-### Auditlog Container Application
-The application has a release every wednesday. [scheduled-release](https://github.com/Altinn/altinn-auth-audit-log/blob/main/.github/workflows/scheduled-release.yml) action is triggered every wednesday 00.00. This action drafts a release, tags the latest package with the release version, f.ex package gets a release version v2024.1. The action drafts the release on different categories. The changes are categorized based on the pull request label. F.ex, A PR with a label bugfix is categorized under bug. The detailed release draft configuration can be found [here](https://github.com/Altinn/altinn-auth-audit-log/blob/main/.github/release-drafter.yml). The deploy in charge for the week, deploys the application to a specific environment(TT02/Prod) using the action [deploy-to-environment](https://github.com/Altinn/altinn-auth-audit-log/blob/main/.github/workflows/deploy-to-environment.yml). The drafted release is then reviewed manually and published by the deploy in charge.
+### Auditlog Container Application / Function application
+The application has a release every wednesday. [create-release-draft](https://github.com/Altinn/altinn-auth-audit-log/blob/main/.github/workflows/create-release-draft.yml) action is triggered every wednesday 00.00. This action drafts release notes, formats a release version f.ex 2024.3.19. The action drafts the release on different categories. The changes are categorized based on the pull request label. F.ex, A PR with a label bugfix is categorized under bug. The detailed release draft configuration can be found [here](https://github.com/Altinn/altinn-auth-audit-log/blob/main/.github/release-drafter.yml). The deploy in charge for the week, publishes the drafted release notes. The release action then triggers [deploy-after-release](https://github.com/Altinn/altinn-auth-audit-log/blob/main/.github/workflows/deploy-after-release.yml) of the release version. 
 
-### Auditlog Function Application
-The application has a release every wednesday. The deploy in charge for the week, deploys the application to a specific environment(TT02/Prod) using the action [deploy-fa-to-environment](https://github.com/Altinn/altinn-auth-audit-log/blob/main/.github/workflows/deploy-fa-to-environment.yml).
+### Manually deploy a specific commit to specific environment
+In some scenarios, there will be a necessity to deploy a specific commit/branch to a specific environment. [manual-build-deploy-to-environment](https://github.com/Altinn/altinn-auth-audit-log/blob/main/.github/workflows/manual-build-deploy-to-environment.yml) action can be used to build/ deploy a specific commitid.
