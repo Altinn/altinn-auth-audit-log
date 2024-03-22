@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites tests="2" failures="1" time="2244.5327">
-<testsuite name="auth-audit-log-authorizationevent" tests="2" failures="1" time="2244.5327" timestamp="2023-10-31T08:47:59.916Z">
-<testcase name="Create authorization event status is 201"><failure message="failed"/></testcase>
+<testsuites tests="2" failures="0" time="2017.5449">
+<testsuite name="auth-audit-log-authorizationevent" tests="2" failures="0" time="2017.5449" timestamp="2024-03-22T09:16:31.635Z">
+<testcase name="Create authorization event status is 200"/>
 <testcase name="Create authorization event status is 400 bad request"/>
 </testsuite>
 </testsuites>
