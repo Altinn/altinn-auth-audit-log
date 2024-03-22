@@ -25,7 +25,7 @@ export default function () {
   var res = authorizationevent.createauthorizationevent(body);
   console.log(res.status);
   var success = check(res, {
-    'Create authorization event status is 200': (r) => r.status === 201,
+    'Create authorization event status is 200': (r) => r.status === 200,
   });
   addErrorCount(success);
   sleep(2);
