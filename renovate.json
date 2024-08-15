@@ -2,5 +2,19 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "local>Altinn/renovate-config"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "System.IdentityModel.Tokens.Jwt",
+        "Microsoft.IdentityModel.Tokens",
+        "Microsoft.IdentityModel.Logging"
+      ],
+      "groupName": "IdentityModel Extensions for .NET",
+      "groupSlug": "azure-activedirectory-identitymodel-extensions-for-dotnet",
+      "matchUpdateTypes": [
+        "major"
+      ]
+    }
   ]
 }
