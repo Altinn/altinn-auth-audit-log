@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -38,7 +38,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         public async Task InsertAuthorizationEvent(AuthorizationEvent authorizationEvent)
         {
             const string INSERTAUTHZEVENT = /*strpsql*/@"
-            INSERT INTO authz.eventlog(
+            INSERT INTO authz.eventlogv1(
 	            sessionid,
 	            created,
 	            subjectuserid,
