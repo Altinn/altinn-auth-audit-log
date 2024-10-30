@@ -33,6 +33,7 @@ namespace Altinn.Auth.AuditLog.Persistence
             _logger = logger;       
         }
 
+        /// <inheritdoc/>
         public async Task InsertAuthenticationEvent(AuthenticationEvent authenticationEvent)
         {
             const string INSERTAUTHNEVENT = /*strpsql*/@"
@@ -104,6 +105,38 @@ namespace Altinn.Auth.AuditLog.Persistence
                 _logger.LogError(e, "AuditLog // AuditLogMetadataRepository // InsertAuthenticationEvent // Exception");
                 throw;
             }
-        }        
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> CreatePartition(string partitionName, DateTime startDate, DateTime endDate)
+        {
+            string tableSchema = "authentication";
+            string tableName = "eventlogv1";
+            try
+            {
+                string CREATEPARTITION = $@"
+                /*strpsql*/
+                CREATE TABLE IF NOT EXISTS {tableSchema}.{partitionName} PARTITION OF {tableSchema}.{tableName}
+                FOR VALUES FROM ('{startDate:yyyy-MM-dd}') TO ('{endDate:yyyy-MM-dd}');";
+                await using NpgsqlCommand pgcom = _dataSource.CreateCommand(CREATEPARTITION);
+
+                var result = await pgcom.ExecuteNonQueryAsync();
+                if (result == 0)
+                {
+                    _logger.LogInformation($"Partition already exists: {partitionName}");
+                    return false;
+                }
+                else
+                {
+                    _logger.LogInformation($"Created partition: {partitionName}");
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "AuditLog // AuditLogMetadataRepository // InsertAuthenticationEvent // Exception");
+                throw;
+            }
+        }
     }
 }

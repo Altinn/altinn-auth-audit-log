@@ -7,6 +7,7 @@ using Altinn.Auth.AuditLog.Filters;
 using Altinn.Auth.AuditLog.Health;
 using Altinn.Auth.AuditLog.Persistence;
 using Altinn.Auth.AuditLog.Persistence.Configuration;
+using Altinn.Auth.AuditLog.Services;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
@@ -25,7 +26,7 @@ string postgreDbAdminConnectionStringSecretName = "PostgreSQLSettings--AdminConn
 string postgreDbConnectionStringSecretName = "PostgreSQLSettings--ConnectionString";
 string applicationInsightsConnectionString = string.Empty;
 string postgreDbAdminConnectionString = "Host=localhost;Port=5432;Username=auth_auditlog_admin;Password=Password;Database=authauditlogdb";
-string postgreDbConnectionString = "Host=localhost;Port=5432;Username=auth_auditlog;Password=Password;Database=authauditlogdb";
+string postgreDbConnectionString = "Host=localhost;Port=5432;Username=auth_auditlog_admin;Password=Password;Database=authauditlogdb";
 
 
 ConfigureSetupLogging();
@@ -71,7 +72,7 @@ async Task ConfigurePostgreSql(ConfigurationManager config)
         string workspacePath = Path.Combine(Environment.CurrentDirectory, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath"));
         if (builder.Environment.IsDevelopment())
         {
-            workspacePath = Path.Combine(Directory.GetParent(Environment.CurrentDirectory).FullName, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath"));
+            workspacePath = Path.Combine(Environment.CurrentDirectory, builder.Configuration.GetValue<string>("PostgreSQLSettings:WorkspacePath"));
         }
 
         app.UseYuniql(
@@ -99,6 +100,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration config)
     services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
     services.Configure<KeyVaultSettings>(config.GetSection("KeyVaultSettings"));
     services.AddNpgsqlDataSource(postgreDbConnectionString, builder => builder.EnableParameterLogging(logParameters));
+    services.AddHostedService<PartitionCreationService>();
 
     if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
     {
@@ -206,4 +208,11 @@ async Task ConfigureKeyVaultSettings(ConfigurationManager config)
     {
         logger.LogError(vaultException, "Unable to add key vault secrets to config.");
     }
+}
+
+/// <summary>
+/// Startup class.
+/// </summary>
+public partial class Program
+{
 }

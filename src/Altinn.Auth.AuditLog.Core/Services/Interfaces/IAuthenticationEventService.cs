@@ -1,4 +1,4 @@
-﻿using Altinn.Auth.AuditLog.Core.Models;
+using Altinn.Auth.AuditLog.Core.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;

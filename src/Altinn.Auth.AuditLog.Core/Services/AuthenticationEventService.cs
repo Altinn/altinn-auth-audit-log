@@ -1,4 +1,4 @@
-﻿using Altinn.Auth.AuditLog.Core.Models;
+using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Core.Services.Interfaces;
 using Microsoft.Extensions.Logging;
