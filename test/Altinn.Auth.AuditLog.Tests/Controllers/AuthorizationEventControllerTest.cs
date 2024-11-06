@@ -1,4 +1,4 @@
-﻿using Altinn.Auth.AuditLog.Controllers;
+using Altinn.Auth.AuditLog.Controllers;
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Tests.Utils;
@@ -18,35 +18,24 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
     /// Test class for <see cref="AuthenticationEventController"></see>
     /// </summary>
     [Collection("AuthorizationEvent Tests")]
-    public class AuthorizationEventControllerTest : IClassFixture<CustomWebApplicationFactory<AuthorizationEventController>>
+    public class AuthorizationEventControllerTest(DbFixture dbFixture, WebApplicationFixture webApplicationFixture)
+        : WebApplicationTests(dbFixture, webApplicationFixture)
     {
-        private readonly CustomWebApplicationFactory<AuthorizationEventController> _factory;
-        private HttpClient _client;
-        private readonly Mock<IAuthorizationEventRepository> _authorizationEventRepositoryMock;
-
-        private readonly JsonSerializerOptions options = new JsonSerializerOptions
+        private HttpClient CreateEventClient()
         {
-            PropertyNameCaseInsensitive = true,
-        };
+            var client = CreateClient();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-        /// <summary>
-        /// Constructor setting up factory, test client and dependencies
-        /// </summary>
-        /// <param name="factory">CustomWebApplicationFactory</param>
-        public AuthorizationEventControllerTest(CustomWebApplicationFactory<AuthorizationEventController> factory)
-        {
-            _factory = factory;         
+            return client;
         }
 
         [Fact]
         public async Task CreateAuthorizationEvent_Ok()
         {
+            using var client = CreateEventClient();
             string requestUri = "auditlog/api/v1/authorizationevent/";
             Mock<IAuthorizationEventRepository> authzEventRepository = new Mock<IAuthorizationEventRepository>();
             authzEventRepository.Setup(q => q.InsertAuthorizationEvent(It.IsAny<AuthorizationEvent>())).Returns(Task.FromResult(GetAuthorizationEvent(true)));
-
-            _client = SetupUtil.GetTestClient(_factory, authzEventRepository.Object);
-            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
@@ -56,7 +45,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
             httpRequestMessage.Headers.Add("Accept", "application/json");
             httpRequestMessage.Headers.Add("ContentType", "application/json");
 
-            HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
+            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
@@ -65,13 +54,10 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
         public async Task CreateAuthorizationEvent_Badrequest_nullobject()
         {
             AuthorizationEvent authorizationEvent = null;
-
+            using var client = CreateEventClient();
             string requestUri = "auditlog/api/v1/authorizationevent/";
             Mock<IAuthorizationEventRepository> authzEventRepository = new Mock<IAuthorizationEventRepository>();
             authzEventRepository.Setup(q => q.InsertAuthorizationEvent(It.IsAny<AuthorizationEvent>())).Returns(Task.FromResult(authorizationEvent));
-
-            _client = SetupUtil.GetTestClient(_factory, authzEventRepository.Object);
-            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
@@ -81,7 +67,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
             httpRequestMessage.Headers.Add("Accept", "application/json");
             httpRequestMessage.Headers.Add("ContentType", "application/json");
 
-            HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
+            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
@@ -89,11 +75,10 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
         [Fact]
         public async Task CreateAuthorizationEvent_Badrequest_created()
         {
+            using var client = CreateEventClient();
             string requestUri = "auditlog/api/v1/authorizationevent/";
             Mock<IAuthorizationEventRepository> authzEventRepository = new Mock<IAuthorizationEventRepository>();
             authzEventRepository.Setup(q => q.InsertAuthorizationEvent(It.IsAny<AuthorizationEvent>())).Throws<System.ArgumentException>();
-            _client = SetupUtil.GetTestClient(_factory, authzEventRepository.Object);
-            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
@@ -103,7 +88,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
             httpRequestMessage.Headers.Add("Accept", "application/json");
             httpRequestMessage.Headers.Add("ContentType", "application/json");
 
-            HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
+            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
@@ -112,7 +97,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
         {
             AuthorizationEvent authorizationEvent = new AuthorizationEvent()
             {
-                Created = isCreated ? new DateTimeOffset(2018, 05, 15, 02, 05, 00, TimeSpan.Zero) : null,
+                Created = isCreated ? TimeProvider.GetUtcNow() : null,
                 SubjectUserId = 2000000,
                 ResourcePartyId = 1000,
                 Resource = "taxreport",

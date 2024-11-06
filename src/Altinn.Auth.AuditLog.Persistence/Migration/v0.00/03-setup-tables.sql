@@ -7,9 +7,9 @@ CREATE TABLE IF NOT EXISTS authentication.authenticationeventtype
 )
 TABLESPACE pg_default;
 
-GRANT ALL ON TABLE authentication.authenticationeventtype TO auth_auditlog;
+GRANT ALL ON TABLE authentication.authenticationeventtype TO "${APP-USER}";
 
-GRANT ALL ON TABLE authentication.authenticationeventtype TO auth_auditlog_admin;
+GRANT ALL ON TABLE authentication.authenticationeventtype TO "${YUNIQL-USER}";
 
 INSERT INTO authentication.authenticationeventtype(
 	authenticationeventtypeid, name, description)
@@ -33,9 +33,9 @@ CREATE TABLE IF NOT EXISTS authentication.authenticationmethod
 )
 TABLESPACE pg_default;
 
-GRANT ALL ON TABLE authentication.authenticationmethod TO auth_auditlog;
+GRANT ALL ON TABLE authentication.authenticationmethod TO "${APP-USER}";
 
-GRANT ALL ON TABLE authentication.authenticationmethod TO auth_auditlog_admin;
+GRANT ALL ON TABLE authentication.authenticationmethod TO "${YUNIQL-USER}";
 
 INSERT INTO authentication.authenticationmethod(
 	authenticationmethodid, name, description)
@@ -115,9 +115,9 @@ CREATE TABLE IF NOT EXISTS authentication.authenticationlevel
 )
 TABLESPACE pg_default;
 
-GRANT ALL ON TABLE authentication.authenticationlevel TO auth_auditlog;
+GRANT ALL ON TABLE authentication.authenticationlevel TO "${APP-USER}";
 
-GRANT ALL ON TABLE authentication.authenticationlevel TO auth_auditlog_admin;
+GRANT ALL ON TABLE authentication.authenticationlevel TO "${YUNIQL-USER}";
 
 INSERT INTO authentication.authenticationlevel(
 	authenticationlevelid, name, description)
@@ -169,6 +169,6 @@ CREATE TABLE IF NOT EXISTS authentication.eventlog
 )
 TABLESPACE pg_default;
 
-GRANT ALL ON TABLE authentication.eventlog TO auth_auditlog;
+GRANT ALL ON TABLE authentication.eventlog TO "${APP-USER}";
 
-GRANT ALL ON TABLE authentication.eventlog TO auth_auditlog_admin;
+GRANT ALL ON TABLE authentication.eventlog TO "${YUNIQL-USER}";

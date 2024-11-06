@@ -34,10 +34,6 @@ CREATE TABLE IF NOT EXISTS authentication.eventlogv1
 
 CREATE INDEX ON authentication.eventlogv1 (created);
 
-GRANT ALL ON TABLE authentication.eventlogv1 TO auth_auditlog;
-
-GRANT ALL ON TABLE authentication.eventlogv1 TO auth_auditlog_admin;
-
 -- Table: authz.eventlog
 CREATE TABLE IF NOT EXISTS authz.eventlogv1
 (
@@ -62,7 +58,3 @@ CREATE TABLE IF NOT EXISTS authz.eventlogv1
 ) PARTITION BY RANGE (created);
 
 CREATE INDEX ON authz.eventlogv1 (created);
-
-GRANT ALL ON TABLE authz.eventlogv1 TO auth_auditlog;
-
-GRANT ALL ON TABLE authz.eventlogv1 TO auth_auditlog_admin;

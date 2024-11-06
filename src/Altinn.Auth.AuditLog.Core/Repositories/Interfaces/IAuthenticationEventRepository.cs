@@ -18,14 +18,5 @@ namespace Altinn.Auth.AuditLog.Core.Repositories.Interfaces
         /// <param name="authenticationEvent"></param>
         /// <returns></returns>
         Task InsertAuthenticationEvent(AuthenticationEvent authenticationEvent);
-
-        /// <summary>
-        /// Checks and creates necessary partition for authentication event table
-        /// </summary>
-        /// <param name="partitionName">the name of the table partition to be created</param>
-        /// <param name="startDate">starting range for the table partition</param>
-        /// <param name="endDate">ending range for the partition</param>
-        /// <returns>true if the partition is created</returns>
-        Task<bool> CreatePartition(string partitionName, DateTime startDate, DateTime endDate);
     }
 }

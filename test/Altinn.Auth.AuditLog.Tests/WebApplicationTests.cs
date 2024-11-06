@@ -2,9 +2,14 @@
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Altinn.Auth.AuditLog.Services;
 using Altinn.Platform.Authentication.Tests;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Time.Testing;
+using Npgsql;
 using Xunit;
 
 namespace Altinn.Auth.AuditLog.Tests;
@@ -23,61 +28,52 @@ public abstract class WebApplicationTests
         _webApplicationFixture = webApplicationFixture;
     }
 
-    private WebApplicationFactory<Program> _webApp;
-    private IServiceProvider _services;
+    private WebApplicationFactory<Program>? _webApp;
+    private IServiceProvider? _services;
     private AsyncServiceScope _scope;
     private DbFixture.OwnedDb? _db;
 
     protected IServiceProvider Services => _scope!.ServiceProvider;
+    protected NpgsqlDataSource DataSource => Services.GetRequiredService<NpgsqlDataSource>();
+    protected FakeTimeProvider TimeProvider => Services.GetRequiredService<FakeTimeProvider>();
 
     protected HttpClient CreateClient()
-        => _webApp!.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        => _webApp!.CreateClient();
 
     protected virtual ValueTask DisposeAsync()
     {
         return ValueTask.CompletedTask;
     }
 
-    protected virtual void ConfigureServices(IServiceCollection services)
+    protected virtual void ConfigureTestConfiguration(IConfigurationBuilder builder)
     {
     }
 
     async Task IAsyncLifetime.DisposeAsync()
     {
         await DisposeAsync();
-        if (_scope is { } scope)
-        {
-            await scope.DisposeAsync();
-        }
+        await _scope.DisposeAsync();
+        if (_webApp is { } webApp) await webApp.DisposeAsync();
 
-        if (_services is IAsyncDisposable iad)
-        {
-            await iad.DisposeAsync();
-        }
-        else if (_services is IDisposable id)
-        {
-            id.Dispose();
-        }
+        if (_db is { } db) await db.DisposeAsync();
 
-        if (_webApp is { } webApp)
-        {
-            await webApp.DisposeAsync();
-        }
-
-        if (_db is { } db)
-        {
-            await db.DisposeAsync();
-        }
     }
 
     async Task IAsyncLifetime.InitializeAsync()
     {
         _db = await _dbFixture.CreateDbAsync();
-        _webApp = _webApplicationFixture.CreateServer(services =>
-        {
-            _db.ConfigureServices(services);
-            ConfigureServices(services);
-        });
+        _webApp = _webApplicationFixture.CreateServer(
+            configureConfiguration: config =>
+            {
+                _db.ConfigureConfiguration(config, "auditlog");
+                ConfigureTestConfiguration(config);
+            },
+            configureServices: services =>
+            {
+                _db.ConfigureServices(services, "auditlog");
+                //services.AddHostedService<PartitionCreationHostedService>();
+                //services.AddSingleton<>(s => s.GetRequiredService<>());                
+            });
 
         _services = _webApp.Services;
         _scope = _services.CreateAsyncScope();

@@ -4,14 +4,31 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Altinn.Authorization.ServiceDefaults" Version="2.6.1" />
+    <PackageReference Include="Altinn.Authorization.ServiceDefaults.Npgsql" Version="2.6.1" />
+    <PackageReference Include="Altinn.Authorization.ServiceDefaults.Npgsql.Yuniql" Version="2.6.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageReference Include="Npgsql" Version="8.0.5" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="8.0.10" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Altinn.Auth.AuditLog.Core\Altinn.Auth.AuditLog.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="Migration/**/*.sql" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Remove="migration\v0.02\00-default-privileges.sql" />
+  </ItemGroup>
 </Project>

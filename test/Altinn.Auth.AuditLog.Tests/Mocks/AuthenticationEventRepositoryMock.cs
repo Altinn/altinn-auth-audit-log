@@ -10,11 +10,6 @@ namespace Altinn.Auth.AuditLog.Tests.Mocks
 {
     public class AuthenticationEventRepositoryMock : IAuthenticationEventRepository
     {
-        public Task<bool> CreatePartition(string partitionName, DateTime startDate, DateTime endDate)
-        {
-            return Task.FromResult(false);
-        }
-
         public Task InsertAuthenticationEvent(AuthenticationEvent authenticationEvent)
         {
             return Task.FromResult(authenticationEvent);

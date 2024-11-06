@@ -7,9 +7,9 @@ CREATE TABLE IF NOT EXISTS authz.decision
 )
 TABLESPACE pg_default;
 
-GRANT ALL ON TABLE authz.decision TO auth_auditlog;
+GRANT ALL ON TABLE authz.decision TO "${APP-USER}";
 
-GRANT ALL ON TABLE authz.decision TO auth_auditlog_admin;
+GRANT ALL ON TABLE authz.decision TO "${YUNIQL-USER}";
 
 INSERT INTO authz.decision(
 	decisionid, name, description)
@@ -48,6 +48,6 @@ CREATE TABLE IF NOT EXISTS authz.eventlog
 )
 TABLESPACE pg_default;
 
-GRANT ALL ON TABLE authz.eventlog TO auth_auditlog;
+GRANT ALL ON TABLE authz.eventlog TO "${APP-USER}";
 
-GRANT ALL ON TABLE authz.eventlog TO auth_auditlog_admin;
+GRANT ALL ON TABLE authz.eventlog TO "${YUNIQL-USER}";

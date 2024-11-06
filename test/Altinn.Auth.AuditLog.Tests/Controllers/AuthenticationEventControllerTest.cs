@@ -1,8 +1,9 @@
-﻿using Altinn.Auth.AuditLog.Controllers;
+using Altinn.Auth.AuditLog.Controllers;
 using Altinn.Auth.AuditLog.Core.Enum;
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Tests.Utils;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -19,35 +20,24 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
     /// Test class for <see cref="AuthenticationEventController"></see>
     /// </summary>
     [Collection("AuthenticationEvent Tests")]
-    public class AuthenticationEventControllerTest : IClassFixture<CustomWebApplicationFactory<AuthenticationEventController>>
+    public class AuthenticationEventControllerTest(DbFixture dbFixture, WebApplicationFixture webApplicationFixture)
+        : WebApplicationTests(dbFixture, webApplicationFixture)
     {
-        private readonly CustomWebApplicationFactory<AuthenticationEventController> _factory;
-        private HttpClient _client;
-        private readonly Mock<IAuthenticationEventRepository> _authenticationEventRepositoryMock;
-
-        private readonly JsonSerializerOptions options = new JsonSerializerOptions
+        private HttpClient CreateEventClient()
         {
-            PropertyNameCaseInsensitive = true,
-        };
+            var client = CreateClient();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-        /// <summary>
-        /// Constructor setting up factory, test client and dependencies
-        /// </summary>
-        /// <param name="factory">CustomWebApplicationFactory</param>
-        public AuthenticationEventControllerTest(CustomWebApplicationFactory<AuthenticationEventController> factory)
-        {
-            _factory = factory;
-            _client = SetupUtil.GetTestClient(factory);
-            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _authenticationEventRepositoryMock = new Mock<IAuthenticationEventRepository>();
+            return client;
         }
 
         [Fact]
         public async Task CreateAuthenticationEvent_Ok()
         {
+            using var client = CreateEventClient();
             AuthenticationEvent authenticationEvent = new AuthenticationEvent()
-            {                
-                Created = new DateTimeOffset(2018, 05, 15, 02, 05, 00, TimeSpan.Zero),
+            {
+                Created = TimeProvider.GetUtcNow(), //new DateTimeOffset(DateTime.Now.Year, 05, 15, 02, 05, 00, TimeSpan.Zero),
                 UserId = 20000003,
                 AuthenticationMethod = AuthenticationMethod.BankID,
                 EventType = AuthenticationEventType.Authenticate,
@@ -64,7 +54,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
             httpRequestMessage.Headers.Add("Accept", "application/json");
             httpRequestMessage.Headers.Add("ContentType", "application/json");
 
-            HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
+            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
@@ -73,7 +63,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
         public async Task CreateAuthenticationEvent_Badrequest_nullobject()
         {
             AuthenticationEvent authenticationEvent = null;
-
+            using var client = CreateEventClient();
             string requestUri = "auditlog/api/v1/authenticationevent/";
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, requestUri)
@@ -84,7 +74,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
             httpRequestMessage.Headers.Add("Accept", "application/json");
             httpRequestMessage.Headers.Add("ContentType", "application/json");
 
-            HttpResponseMessage response = await _client.SendAsync(httpRequestMessage);
+            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }

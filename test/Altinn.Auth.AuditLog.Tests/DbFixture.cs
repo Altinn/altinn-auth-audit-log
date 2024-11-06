@@ -1,18 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Altinn.Auth.AuditLog.Persistence.Configuration;
+using Altinn.Authorization.ServiceDefaults.Npgsql.Yuniql;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Testcontainers.PostgreSql;
-using Xunit;
-using Yuniql.Core;
 
 namespace Altinn.Auth.AuditLog.Tests;
 
-public class DbFixture
+public class DbFixture 
     : IAsyncLifetime
 {
     private const int MAX_CONCURRENCY = 20;
@@ -43,12 +39,12 @@ public class DbFixture
         private int _dbCounter = 0;
         private readonly AsyncLock _dbLock = new();
         private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
-            .WithImage("timescale/timescaledb:2.1.0-pg11")
-            .WithUsername("auth_auditlog_admin")
-            .WithPassword("Password")
-            .WithDatabase("authauditlogdb")
-            .WithCleanUp(true)
-            .Build();
+                    .WithImage("timescale/timescaledb:2.1.0-pg11")
+                    .WithUsername("test-db-admin")
+                    .WithPassword(Guid.NewGuid().ToString())
+                    .WithDatabase("authauditlogdb")
+                    .WithCleanUp(true)
+                    .Build();
 
         private readonly AsyncConcurrencyLimiter _throtler = new(MAX_CONCURRENCY);
 
@@ -64,7 +60,13 @@ public class DbFixture
 
         public async Task<OwnedDb> CreateDbAsync(DbFixture fixture)
         {
-            var dbName = $"test_{Interlocked.Increment(ref _dbCounter)}";
+            var counter = Interlocked.Increment(ref _dbCounter);
+            var dbName = $"test_{counter}";
+            var appUserName = $"app_{counter}";
+            var adminUserName = $"admin_{counter}";
+
+            var appUserPassword = Guid.NewGuid().ToString();
+            var adminUserPassword = Guid.NewGuid().ToString();
 
             var ticket = await _throtler.Acquire();
 
@@ -73,33 +75,36 @@ public class DbFixture
                 // only create 1 db at once
                 using var guard = await _dbLock.Acquire();
 
-                await using var cmd = _db!.CreateCommand(/*strpsql*/$"CREATE DATABASE {dbName};");
-                await cmd.ExecuteNonQueryAsync();
+                await using var batch = _db!.CreateBatch();
+                var cmd = batch.CreateBatchCommand();
+                cmd.CommandText = /*strpsql*/$"""CREATE ROLE "{appUserName}" LOGIN PASSWORD '{appUserPassword}'""";
+                batch.BatchCommands.Add(cmd);
+
+                cmd = batch.CreateBatchCommand();
+                cmd.CommandText = /*strpsql*/$"""CREATE ROLE "{adminUserName}" LOGIN PASSWORD '{adminUserPassword}'""";
+                batch.BatchCommands.Add(cmd);
+
+                cmd = batch.CreateBatchCommand();
+                cmd.CommandText = /*strpsql*/$"""CREATE DATABASE "{dbName}" OWNER "{adminUserName}" """;
+                batch.BatchCommands.Add(cmd);
+
+                cmd = batch.CreateBatchCommand();
+                cmd.CommandText = /*strpsql*/$"""GRANT CONNECT ON DATABASE "{dbName}" TO "{appUserName}" """;
+                batch.BatchCommands.Add(cmd);
+
+                await batch.ExecuteNonQueryAsync();
 
                 var connectionStringBuilder = new NpgsqlConnectionStringBuilder(_connectionString) { Database = dbName, IncludeErrorDetail = true };
-                var connectionString = connectionStringBuilder.ToString();
 
-                var configuration = new Yuniql.AspNetCore.Configuration
-                {
-                    Platform = SUPPORTED_DATABASES.POSTGRESQL,
-                    Workspace = Path.Combine(FindWorkspace(), "src", "Altinn.Auth.AuditLog", "Migration"),
-                    ConnectionString = connectionString,
-                    IsAutoCreateDatabase = false,
-                    Environment = "integrationtest",
-                    Tokens = [
-                        KeyValuePair.Create("YUNIQL-USER", connectionStringBuilder.Username),
-                    ],
-                };
+                connectionStringBuilder.Username = adminUserName;
+                connectionStringBuilder.Password = adminUserPassword;
+                var adminConnectionString = connectionStringBuilder.ConnectionString;
 
-                var traceService = TraceService.Instance;
-                var dataService = new Yuniql.PostgreSql.PostgreSqlDataService(traceService);
-                var bulkImportService = new Yuniql.PostgreSql.PostgreSqlBulkImportService(traceService);
-                var migrationServiceFactory = new MigrationServiceFactory(traceService);
-                var migrationService = migrationServiceFactory.Create(dataService, bulkImportService);
-                ConfigurationHelper.Initialize(configuration);
-                migrationService.Run();
+                connectionStringBuilder.Username = appUserName;
+                connectionStringBuilder.Password = appUserPassword;
+                var appConnectionString = connectionStringBuilder.ConnectionString;
 
-                var ownedDb = new OwnedDb(connectionString, dbName, fixture, ticket);
+                var ownedDb = new OwnedDb(adminConnectionString, appConnectionString, dbName, fixture, ticket);
                 ticket = null;
                 return ownedDb;
             }
@@ -127,50 +132,52 @@ public class DbFixture
             _throtler.Dispose();
             _dbLock.Dispose();
         }
-
-        static string FindWorkspace()
-        {
-            var dir = Environment.CurrentDirectory;
-            while (dir != null)
-            {
-                if (Directory.Exists(Path.Combine(dir, ".git")))
-                {
-                    return dir;
-                }
-
-                dir = Directory.GetParent(dir)?.FullName;
-            }
-
-            throw new InvalidOperationException("Workspace directory not found");
-        }
     }
 
     public sealed class OwnedDb : IAsyncDisposable
     {
-        readonly string _connectionString;
+        readonly string _adminConnectionString;
+        readonly string _appConnectionString;
         readonly string _dbName;
         readonly DbFixture _db;
         readonly IDisposable _ticket;
 
-        public OwnedDb(string connectionString, string dbName, DbFixture db, IDisposable ticket)
+        public OwnedDb(string adminConnectionString, string appConnectionString, string dbName, DbFixture db, IDisposable ticket)
         {
-            _connectionString = connectionString;
+            _adminConnectionString = adminConnectionString;
+            _appConnectionString = appConnectionString;
             _dbName = dbName;
             _db = db;
             _ticket = ticket;
         }
 
-        public string ConnectionString => _connectionString;
+        public string AdminConnectionString => _adminConnectionString;
+
+        public string AppConnectionString => _appConnectionString;
 
         internal string DbName => _dbName;
 
-        public void ConfigureServices(IServiceCollection services)
+        public void ConfigureApplication(IHostApplicationBuilder builder)
         {
-            services.AddOptions<PostgreSQLSettings>()
-                .Configure((PostgreSQLSettings settings) =>
+            var serviceDescriptor = builder.GetAltinnServiceDescriptor();
+            ConfigureConfiguration(builder.Configuration, serviceDescriptor.Name);
+            ConfigureServices(builder.Services, serviceDescriptor.Name);
+        }
+
+        public void ConfigureConfiguration(IConfigurationBuilder builder, string serviceName)
+        {
+            builder.AddInMemoryCollection([
+                new($"Altinn:Npgsql:auditlog:ConnectionString", _appConnectionString),
+                new($"Altinn:Npgsql:auditlog:Migrate:ConnectionString", _adminConnectionString),
+            ]);
+        }
+
+        public void ConfigureServices(IServiceCollection services, string serviceName)
+        {
+            services.AddOptions<YuniqlDatabaseMigratorOptions>()
+                .Configure(cfg =>
                 {
-                    settings.ConnectionString = ConnectionString;
-                    settings.AuthAuditLogDbPwd = "unused";
+                    cfg.Environment = "integrationtest";
                 });
         }
 
@@ -178,64 +185,6 @@ public class DbFixture
         {
             await _db.DropDbAsync(this);
             _ticket.Dispose();
-        }
-    }
-
-    class TraceService : Yuniql.Extensibility.ITraceService
-    {
-        public static Yuniql.Extensibility.ITraceService Instance { get; } = new TraceService();
-
-        /// <inheritdoc/>
-        public bool IsDebugEnabled { get; set; } = false;
-
-        /// <inheritdoc/>
-        public bool IsTraceSensitiveData { get; set; } = false;
-
-        /// <inheritdoc/>
-        public bool IsTraceToFile { get; set; } = false;
-
-        /// <inheritdoc/>
-        public bool IsTraceToDirectory { get; set; } = false;
-
-        /// <inheritdoc/>
-        public string? TraceDirectory { get; set; }
-
-        /// <inheritdoc/>
-        public void Info(string message, object? payload = null)
-        {
-            var traceMessage = $"INF   {DateTime.UtcNow.ToString("o")}   {message}{Environment.NewLine}";
-            Console.Write(traceMessage);
-        }
-
-        /// <inheritdoc/>
-        public void Error(string message, object? payload = null)
-        {
-            var traceMessage = $"ERR   {DateTime.UtcNow.ToString("o")}   {message}{Environment.NewLine}";
-            Console.Write(traceMessage);
-        }
-
-        /// <inheritdoc/>
-        public void Debug(string message, object? payload = null)
-        {
-            if (IsDebugEnabled)
-            {
-                var traceMessage = $"DBG   {DateTime.UtcNow.ToString("o")}   {message}{Environment.NewLine}";
-                Console.Write(traceMessage);
-            }
-        }
-
-        /// <inheritdoc/>
-        public void Success(string message, object? payload = null)
-        {
-            var traceMessage = $"INF   {DateTime.UtcNow.ToString("u")}   {message}{Environment.NewLine}";
-            Console.Write(traceMessage);
-        }
-
-        /// <inheritdoc/>
-        public void Warn(string message, object? payload = null)
-        {
-            var traceMessage = $"WRN   {DateTime.UtcNow.ToString("o")}   {message}{Environment.NewLine}";
-            Console.Write(traceMessage);
         }
     }
 }
