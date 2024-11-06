@@ -20,7 +20,6 @@ app.UseAuthentication();
 
 app.MapDefaultAltinnEndpoints();
 app.MapControllers();
-app.MapHealthChecks("/health");
 
 app.Run();
 

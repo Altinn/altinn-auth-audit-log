@@ -32,7 +32,6 @@ namespace Altinn.Auth.AuditLog
 
             services.Configure<KeyVaultSettings>(config.GetSection("kvSetting"));
             builder.AddAuditLogPersistence();
-            services.AddHealthChecks().AddCheck<HealthCheck>("auditlog_ui_health_check");
             builder.Services.AddSingleton<PartitionCreationHostedService>();
             builder.Services.AddHostedService(sp => sp.GetRequiredService<PartitionCreationHostedService>());
             services.AddSingleton<IAuthenticationEventService, AuthenticationEventService>();

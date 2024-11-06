@@ -25,7 +25,7 @@ namespace Altinn.Auth.AuditLog.Tests.Health
         [Fact]
         public async Task VerifyHealthCheck_OK()
         {
-            using var client = CreateEventClient();
+            using var client = CreateClient();
 
             HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, "/health");
 
@@ -34,10 +34,21 @@ namespace Altinn.Auth.AuditLog.Tests.Health
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
 
-        private HttpClient CreateEventClient()
+        /// <summary>
+        /// Verify that component responds on health check
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task VerifyAliveCheck_OK()
         {
-            var client = CreateClient();
-            return client;
+            HttpClient client = CreateClient();
+
+            HttpRequestMessage httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, "/alive")
+            {
+            };
+
+            HttpResponseMessage response = await client.SendAsync(httpRequestMessage);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
     }
 }
