@@ -17,6 +17,7 @@ namespace Altinn.Auth.AuditLog.Services
         private readonly TimeProvider _timeProvider;
         private ITimer? _timer;
         private CancellationTokenSource? _stoppingCts;
+        private bool _disposed;
 
         private Task _runningJob = Task.CompletedTask;
 
@@ -58,7 +59,10 @@ namespace Altinn.Auth.AuditLog.Services
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            Console.WriteLine("StopAsync: {0}", new StackTrace());
+            lock (_lock)
+            {
+                if (_disposed) return;
+            }
 
             if (_timer is { } timer)
             {
@@ -73,8 +77,13 @@ namespace Altinn.Auth.AuditLog.Services
 
         public void Dispose()
         {
-            Console.WriteLine("Dispose: {0}", new StackTrace());
+            lock (_lock)
+            {
+                if (_disposed) return;
+                _disposed = true;
+            }
 
+            _timer?.Dispose();
             _stoppingCts?.Dispose();
         }
 
@@ -138,15 +147,14 @@ namespace Altinn.Auth.AuditLog.Services
             var nextMonthPartitionName = $"eventlogv1_y{nextMonthStartDate.Year}m{nextMonthStartDate.Month:D2}";
 
             // List of partitions for both schemas
-            var partitions = new List<Partition>
-            {
-                new Partition{ SchemaName = authenticationSchemaName, Name = pastMonthPartitionName, StartDate = pastMonthStartDate, EndDate = pastMonthEndDate },
-                new Partition{ SchemaName = authenticationSchemaName, Name = currentMonthPartitionName, StartDate = currentMonthStartDate, EndDate = currentMonthEndDate },
-                new Partition{ SchemaName = authenticationSchemaName, Name = nextMonthPartitionName, StartDate = nextMonthStartDate, EndDate = nextMonthEndDate },
-                new Partition{ SchemaName = authzSchemaName, Name = pastMonthPartitionName, StartDate = pastMonthStartDate, EndDate = pastMonthEndDate },
-                new Partition{ SchemaName = authzSchemaName, Name = currentMonthPartitionName, StartDate = currentMonthStartDate, EndDate = currentMonthEndDate },
-                new Partition{ SchemaName = authzSchemaName, Name = nextMonthPartitionName, StartDate = nextMonthStartDate, EndDate = nextMonthEndDate }
-            };
+            IReadOnlyList<Partition> partitions = [
+                new Partition { SchemaName = authenticationSchemaName, Name = pastMonthPartitionName, StartDate = pastMonthStartDate, EndDate = pastMonthEndDate },
+                new Partition { SchemaName = authenticationSchemaName, Name = currentMonthPartitionName, StartDate = currentMonthStartDate, EndDate = currentMonthEndDate },
+                new Partition { SchemaName = authenticationSchemaName, Name = nextMonthPartitionName, StartDate = nextMonthStartDate, EndDate = nextMonthEndDate },
+                new Partition { SchemaName = authzSchemaName, Name = pastMonthPartitionName, StartDate = pastMonthStartDate, EndDate = pastMonthEndDate },
+                new Partition { SchemaName = authzSchemaName, Name = currentMonthPartitionName, StartDate = currentMonthStartDate, EndDate = currentMonthEndDate },
+                new Partition { SchemaName = authzSchemaName, Name = nextMonthPartitionName, StartDate = nextMonthStartDate, EndDate = nextMonthEndDate }
+            ];
 
             await _partitionManagerRepository.CreatePartitions(partitions, cancellationToken);
         }

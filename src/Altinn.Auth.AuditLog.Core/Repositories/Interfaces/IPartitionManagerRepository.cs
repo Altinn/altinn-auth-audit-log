@@ -29,6 +29,6 @@ namespace Altinn.Auth.AuditLog.Core.Repositories.Interfaces
         /// <param name="partitions">the list of partitions to be created</param>
         /// <param name="cancellationToken">A <see cref="CancellationToken"/>.</param>
         /// <returns>true if the partition is created</returns>
-        Task<bool> CreatePartitions(List<Partition> partitions, CancellationToken cancellationToken = default);
+        Task<bool> CreatePartitions(IReadOnlyList<Partition> partitions, CancellationToken cancellationToken = default);
     }
 }

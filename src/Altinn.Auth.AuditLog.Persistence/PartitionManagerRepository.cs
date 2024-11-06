@@ -70,7 +70,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CreatePartitions(List<Partition> partitions, CancellationToken cancellationToken = default)
+        public async Task<bool> CreatePartitions(IReadOnlyList<Partition> partitions, CancellationToken cancellationToken = default)
         {
             // Start a batch to execute multiple statements on the same connection
             await using (var batch = _dataSource.CreateBatch())
