@@ -4,6 +4,7 @@ using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Core.Services.Interfaces;
 using Npgsql;
+using System.Diagnostics;
 
 namespace Altinn.Auth.AuditLog.Services
 {
@@ -57,6 +58,8 @@ namespace Altinn.Auth.AuditLog.Services
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            Console.WriteLine("StopAsync: {0}", new StackTrace());
+
             if (_timer is { } timer)
             {
                 await timer.DisposeAsync();
@@ -70,6 +73,8 @@ namespace Altinn.Auth.AuditLog.Services
 
         public void Dispose()
         {
+            Console.WriteLine("Dispose: {0}", new StackTrace());
+
             _stoppingCts?.Dispose();
         }
 
