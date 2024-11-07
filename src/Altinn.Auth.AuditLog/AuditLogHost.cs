@@ -18,7 +18,7 @@ namespace Altinn.Auth.AuditLog
     internal static class AuditLogHost
     {
         /// <summary>
-        /// Configures the resource registry host.
+        /// Configures the auditlog host.
         /// </summary>
         /// <param name="args">The command line arguments.</param>
         public static WebApplication Create(string[] args)
