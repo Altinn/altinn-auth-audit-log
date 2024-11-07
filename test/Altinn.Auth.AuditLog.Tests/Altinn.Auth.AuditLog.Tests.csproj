@@ -35,10 +35,4 @@
     <ProjectReference Include="..\..\src\Altinn.Auth.AuditLog\Altinn.Auth.AuditLog.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="appsettings.test.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>
