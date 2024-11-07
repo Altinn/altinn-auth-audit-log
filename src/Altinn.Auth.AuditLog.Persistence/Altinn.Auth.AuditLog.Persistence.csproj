@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -26,9 +26,5 @@
   
   <ItemGroup>
     <EmbeddedResource Include="Migration/**/*.sql" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <None Remove="migration\v0.02\00-default-privileges.sql" />
   </ItemGroup>
 </Project>

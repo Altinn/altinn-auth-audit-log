@@ -2,7 +2,6 @@
 
 using System;
 using System.Threading.Tasks;
-using Altinn.Platform.Authentication.Tests.Utils;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -53,12 +52,6 @@ public class WebApplicationFixture
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            var settings = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.test.json")
-                .Build();
-
-            builder.UseConfiguration(settings);
-
             builder.ConfigureTestServices(services =>
             {
                 var timeProvider = new FakeTimeProvider();

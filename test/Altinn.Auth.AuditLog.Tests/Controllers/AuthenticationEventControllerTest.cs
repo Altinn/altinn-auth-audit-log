@@ -1,18 +1,10 @@
 using Altinn.Auth.AuditLog.Controllers;
 using Altinn.Auth.AuditLog.Core.Enum;
 using Altinn.Auth.AuditLog.Core.Models;
-using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
-using Altinn.Auth.AuditLog.Tests.Utils;
-using Microsoft.AspNetCore.Authentication.OAuth;
-using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Altinn.Auth.AuditLog.Tests.Controllers
 {
@@ -37,7 +29,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
             using var client = CreateEventClient();
             AuthenticationEvent authenticationEvent = new AuthenticationEvent()
             {
-                Created = TimeProvider.GetUtcNow(), //new DateTimeOffset(DateTime.Now.Year, 05, 15, 02, 05, 00, TimeSpan.Zero),
+                Created = TimeProvider.GetUtcNow(),
                 UserId = 20000003,
                 AuthenticationMethod = AuthenticationMethod.BankID,
                 EventType = AuthenticationEventType.Authenticate,

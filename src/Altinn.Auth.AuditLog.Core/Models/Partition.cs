@@ -9,11 +9,11 @@ namespace Altinn.Auth.AuditLog.Core.Models
     /// <summary>
     /// Used for partition creation
     /// </summary>
-    public class Partition
+    public sealed record Partition
     {
         public required string Name { get; set; }
-        public DateOnly StartDate { get; set; }
-        public DateOnly EndDate { get; set;}
+        public required DateOnly StartDate { get; set; }
+        public required DateOnly EndDate { get; set;}
         public required string SchemaName { get; set; }
     }
 }

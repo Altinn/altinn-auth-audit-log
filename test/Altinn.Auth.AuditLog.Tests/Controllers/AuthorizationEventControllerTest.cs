@@ -1,16 +1,11 @@
 using Altinn.Auth.AuditLog.Controllers;
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
-using Altinn.Auth.AuditLog.Tests.Utils;
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Altinn.Auth.AuditLog.Tests.Controllers
 {

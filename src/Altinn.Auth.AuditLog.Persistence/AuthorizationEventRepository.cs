@@ -27,38 +27,40 @@ namespace Altinn.Auth.AuditLog.Persistence
 
         public async Task InsertAuthorizationEvent(AuthorizationEvent authorizationEvent)
         {
-            const string INSERTAUTHZEVENT = /*strpsql*/@"
+            const string INSERTAUTHZEVENT = /*strpsql*/
+            """
             INSERT INTO authz.eventlogv1(
-	            sessionid,
-	            created,
-	            subjectuserid,
-	            subjectorgcode,
-	            subjectorgnumber,
-	            subjectparty,
-	            resourcepartyid,
-	            resource,
-	            instanceid,
-	            operation,
-	            ipaddress,
-	            contextrequestjson,
-	            decision
+                sessionid,
+                created,
+                subjectuserid,
+                subjectorgcode,
+                subjectorgnumber,
+                subjectparty,
+                resourcepartyid,
+                resource,
+                instanceid,
+                operation,
+                ipaddress,
+                contextrequestjson,
+                decision
             )
             VALUES (
-	            @sessionid,
-	            @created,
-	            @subjectuserid,
-	            @subjectorgcode,
-	            @subjectorgnumber,
-	            @subjectparty,
-	            @resourcepartyid,
-	            @resource,
-	            @instanceid,
-	            @operation,
-	            @ipaddress,
-	            @contextrequestjson,
-	            @decision
+                @sessionid,
+                @created,
+                @subjectuserid,
+                @subjectorgcode,
+                @subjectorgnumber,
+                @subjectparty,
+                @resourcepartyid,
+                @resource,
+                @instanceid,
+                @operation,
+                @ipaddress,
+                @contextrequestjson,
+                @decision
             )
-            RETURNING *;";
+            RETURNING *;
+            """;
 
             if (authorizationEvent == null) 
             {

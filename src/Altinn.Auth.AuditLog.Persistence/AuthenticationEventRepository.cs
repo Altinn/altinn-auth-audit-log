@@ -27,38 +27,40 @@ namespace Altinn.Auth.AuditLog.Persistence
         /// <inheritdoc/>
         public async Task InsertAuthenticationEvent(AuthenticationEvent authenticationEvent)
         {
-            const string INSERTAUTHNEVENT = /*strpsql*/@"
-            INSERT INTO authentication.eventlogv1(
-	        sessionid,
-	        externalsessionid,
-	        subscriptionkey,
-	        externaltokenissuer,
-	        created,
-	        userid,
-	        supplierid,
-	        orgnumber,
-	        eventtypeid,	
-	        authenticationmethodid,
-	        authenticationlevelid,
-	        ipaddress,
-	        isauthenticated
+            const string INSERTAUTHNEVENT = /*strpsql*/
+            """
+            INSERT INTO authentication.eventlogv1 (
+                sessionid,
+                externalsessionid,
+                subscriptionkey,
+                externaltokenissuer,
+                created,
+                userid,
+                supplierid,
+                orgnumber,
+                eventtypeid,
+                authenticationmethodid,
+                authenticationlevelid,
+                ipaddress,
+                isauthenticated
             )
             VALUES (
-	            @sessionid,
-	            @externalsessionid,
-	            @subscriptionkey,
-	            @externaltokenissuer,
-	            @created,
-	            @userid,
-	            @supplierid,
-	            @orgnumber,
-	            @eventtypeid,	
-	            @authenticationmethodid,
-	            @authenticationlevelid,
-	            @ipaddress,
-	            @isauthenticated
+                @sessionid,
+                @externalsessionid,
+                @subscriptionkey,
+                @externaltokenissuer,
+                @created,
+                @userid,
+                @supplierid,
+                @orgnumber,
+                @eventtypeid,
+                @authenticationmethodid,
+                @authenticationlevelid,
+                @ipaddress,
+                @isauthenticated
             )
-            RETURNING *;";
+            RETURNING *;
+            """;
 
             if (authenticationEvent == null) 
             {

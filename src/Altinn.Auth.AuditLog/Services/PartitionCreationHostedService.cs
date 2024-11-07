@@ -46,7 +46,7 @@ namespace Altinn.Auth.AuditLog.Services
                     var self = (PartitionCreationHostedService)state!;
                     self.CreateMonthlyPartitionFromTimer();
                 },
-                dueTime: TimeSpan.FromDays(1), // if this runs at once, change to 1 day
+                dueTime: TimeSpan.FromDays(1),
                 period: TimeSpan.FromDays(1),
                 state: this
             );

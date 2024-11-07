@@ -88,17 +88,9 @@ namespace Altinn.Auth.AuditLog.Persistence
                         batch.BatchCommands.Add(cmd);
                     }
 
-                    var result = await batch.ExecuteNonQueryAsync(cancellationToken);
-                    if (result == 0)
-                    {
-                        _logger.LogInformation("Partitions not created");
-                        return false;
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Partitions are Created");
-                        return true;
-                    }
+                    await batch.ExecuteNonQueryAsync(cancellationToken);
+                    return true;
+
                 }
                 catch (Exception ex)
                 {

@@ -1,5 +1,5 @@
 
--- Table: authentication.eventlog
+-- Table: authentication.eventlogv1
 CREATE TABLE IF NOT EXISTS authentication.eventlogv1
 (
 	sessionid text,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS authentication.eventlogv1
 
 CREATE INDEX ON authentication.eventlogv1 (created);
 
--- Table: authz.eventlog
+-- Table: authz.eventlogv1
 CREATE TABLE IF NOT EXISTS authz.eventlogv1
 (
 	sessionid text,
