@@ -70,9 +70,7 @@ public abstract class WebApplicationTests
             },
             configureServices: services =>
             {
-                _db.ConfigureServices(services, "auditlog");
-                //services.AddHostedService<PartitionCreationHostedService>();
-                //services.AddSingleton<>(s => s.GetRequiredService<>());                
+                _db.ConfigureServices(services, "auditlog");              
             });
 
         _services = _webApp.Services;
