@@ -37,39 +37,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         }
 
         /// <inheritdoc/>
-        public async Task<bool> CreatePartition(string tableSchema, string partitionName, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
-        {
-            string tableName = "eventlogv1";
-            try
-            {
-                string CREATEPARTITION =
-                    /*strpsql*/$"""
-                    CREATE TABLE IF NOT EXISTS {tableSchema}.{partitionName} PARTITION OF {tableSchema}.{tableName}
-                    FOR VALUES FROM ('{startDate:yyyy-MM-dd}') TO ('{endDate:yyyy-MM-dd}')
-                    """;
-                await using NpgsqlCommand pgcom = _dataSource.CreateCommand(CREATEPARTITION);
-
-                var result = await pgcom.ExecuteNonQueryAsync(cancellationToken);
-                if (result == 0)
-                {
-                    _logger.LogInformation($"Partition already exists: {partitionName}");
-                    return false;
-                }
-                else
-                {
-                    _logger.LogInformation($"Created partition: {partitionName}");
-                    return true;
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "AuditLog // PartitionManagerRepository // CreatePartition // Exception");
-                throw;
-            }
-        }
-
-        /// <inheritdoc/>
-        public async Task<bool> CreatePartitions(IReadOnlyList<Partition> partitions, CancellationToken cancellationToken = default)
+        public async Task CreatePartitions(IReadOnlyList<Partition> partitions, CancellationToken cancellationToken = default)
         {
             // Start a batch to execute multiple statements on the same connection
             await using (var batch = _dataSource.CreateBatch())
@@ -89,7 +57,6 @@ namespace Altinn.Auth.AuditLog.Persistence
                     }
 
                     await batch.ExecuteNonQueryAsync(cancellationToken);
-                    return true;
 
                 }
                 catch (Exception ex)
