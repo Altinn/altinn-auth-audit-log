@@ -13,6 +13,5 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
 EXPOSE 5166
 WORKDIR /app
 COPY --from=build /app_output .
-COPY src/Altinn.Auth.AuditLog/Migration ./Migration
 RUN mkdir /tmp/logtelemetry
 ENTRYPOINT ["dotnet", "Altinn.Auth.AuditLog.dll"]
