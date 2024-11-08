@@ -27,7 +27,6 @@ namespace Altinn.Auth.AuditLog
             var services = builder.Services;
             var config = builder.Configuration;
 
-            MapPostgreSqlConfiguration(builder);
             services.AddMemoryCache();
 
             services.Configure<KeyVaultSettings>(config.GetSection("kvSetting"));
@@ -45,34 +44,6 @@ namespace Altinn.Auth.AuditLog
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             return builder.Build();
-        }
-
-        // Note: eventually we can rename the configuration values and remove this mapping
-        private static void MapPostgreSqlConfiguration(IHostApplicationBuilder builder)
-        {
-            var runMigrations = builder.Configuration.GetValue<bool>("PostgreSQLSettings:EnableDBConnection");
-            var adminConnectionStringFmt = builder.Configuration.GetValue<string>("PostgreSQLSettings:AdminConnectionString");
-            var adminConnectionStringPwd = builder.Configuration.GetValue<string>("PostgreSQLSettings:AuthAuditLogDbAdminPwd");
-            var connectionStringFmt = builder.Configuration.GetValue<string>("PostgreSQLSettings:ConnectionString");
-            var connectionStringPwd = builder.Configuration.GetValue<string>("PostgreSQLSettings:AuthAuditLogDbPwd");
-
-            var adminConnectionString = string.Format(adminConnectionStringFmt, adminConnectionStringPwd);
-            var connectionString = string.Format(connectionStringFmt, connectionStringPwd);
-
-            var serviceDescriptor = builder.Services.GetAltinnServiceDescriptor();
-            var existingConnString = builder.Configuration.GetValue<string>($"ConnectionStrings:{serviceDescriptor.Name}_db");
-            var existingNpgsqlString = builder.Configuration.GetValue<string>($"Altinn:Npgsql:{serviceDescriptor.Name}:ConnectionString");
-
-            if (!string.IsNullOrEmpty(existingConnString) || !string.IsNullOrEmpty(existingNpgsqlString))
-            {
-                return;
-            }
-
-            builder.Configuration.AddInMemoryCollection([
-                new($"Altinn:Npgsql:{serviceDescriptor.Name}:ConnectionString", connectionString),
-                new($"Altinn:Npgsql:{serviceDescriptor.Name}:Migrate:ConnectionString", adminConnectionString),
-                new($"Altinn:Npgsql:{serviceDescriptor.Name}:Migrate:Enabled", runMigrations ? "true" : "false"),
-            ]);
         }
     }
 }
