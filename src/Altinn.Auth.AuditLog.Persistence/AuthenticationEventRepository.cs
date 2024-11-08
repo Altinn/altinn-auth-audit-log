@@ -1,15 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
-using Altinn.Auth.AuditLog.Persistence.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace Altinn.Auth.AuditLog.Persistence
@@ -18,55 +10,57 @@ namespace Altinn.Auth.AuditLog.Persistence
     public class AuthenticationEventRepository : IAuthenticationEventRepository
     {
         private readonly ILogger _logger;
-        private readonly NpgsqlDataSource _dataSource;       
+        private readonly NpgsqlDataSource _dataSource;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthenticationEventRepository"/> class
         /// </summary>
         /// <param name="dataSource">The postgreSQL datasource for AuditLogDB</param>
         /// <param name="logger">handler for logger service</param>
-        public AuthenticationEventRepository(
-            NpgsqlDataSource dataSource,
+        public AuthenticationEventRepository(NpgsqlDataSource dataSource,
             ILogger<AuthenticationEventRepository> logger) 
         {
             _dataSource = dataSource;
             _logger = logger;       
         }
 
+        /// <inheritdoc/>
         public async Task InsertAuthenticationEvent(AuthenticationEvent authenticationEvent)
         {
-            const string INSERTAUTHNEVENT = /*strpsql*/@"
-            INSERT INTO authentication.eventlog(
-	        sessionid,
-	        externalsessionid,
-	        subscriptionkey,
-	        externaltokenissuer,
-	        created,
-	        userid,
-	        supplierid,
-	        orgnumber,
-	        eventtypeid,	
-	        authenticationmethodid,
-	        authenticationlevelid,
-	        ipaddress,
-	        isauthenticated
+            const string INSERTAUTHNEVENT = /*strpsql*/
+            """
+            INSERT INTO authentication.eventlogv1 (
+                sessionid,
+                externalsessionid,
+                subscriptionkey,
+                externaltokenissuer,
+                created,
+                userid,
+                supplierid,
+                orgnumber,
+                eventtypeid,
+                authenticationmethodid,
+                authenticationlevelid,
+                ipaddress,
+                isauthenticated
             )
             VALUES (
-	            @sessionid,
-	            @externalsessionid,
-	            @subscriptionkey,
-	            @externaltokenissuer,
-	            @created,
-	            @userid,
-	            @supplierid,
-	            @orgnumber,
-	            @eventtypeid,	
-	            @authenticationmethodid,
-	            @authenticationlevelid,
-	            @ipaddress,
-	            @isauthenticated
+                @sessionid,
+                @externalsessionid,
+                @subscriptionkey,
+                @externaltokenissuer,
+                @created,
+                @userid,
+                @supplierid,
+                @orgnumber,
+                @eventtypeid,
+                @authenticationmethodid,
+                @authenticationlevelid,
+                @ipaddress,
+                @isauthenticated
             )
-            RETURNING *;";
+            RETURNING *;
+            """;
 
             if (authenticationEvent == null) 
             {
@@ -104,6 +98,6 @@ namespace Altinn.Auth.AuditLog.Persistence
                 _logger.LogError(e, "AuditLog // AuditLogMetadataRepository // InsertAuthenticationEvent // Exception");
                 throw;
             }
-        }        
+        }
     }
 }

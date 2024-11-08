@@ -1,17 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Altinn.Auth.AuditLog.Core.Models;
-using Altinn.Auth.AuditLog.Core.Repositories;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
-using Altinn.Auth.AuditLog.Persistence.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace Altinn.Auth.AuditLog.Persistence
@@ -37,38 +27,40 @@ namespace Altinn.Auth.AuditLog.Persistence
 
         public async Task InsertAuthorizationEvent(AuthorizationEvent authorizationEvent)
         {
-            const string INSERTAUTHZEVENT = /*strpsql*/@"
-            INSERT INTO authz.eventlog(
-	            sessionid,
-	            created,
-	            subjectuserid,
-	            subjectorgcode,
-	            subjectorgnumber,
-	            subjectparty,
-	            resourcepartyid,
-	            resource,
-	            instanceid,
-	            operation,
-	            ipaddress,
-	            contextrequestjson,
-	            decision
+            const string INSERTAUTHZEVENT = /*strpsql*/
+            """
+            INSERT INTO authz.eventlogv1(
+                sessionid,
+                created,
+                subjectuserid,
+                subjectorgcode,
+                subjectorgnumber,
+                subjectparty,
+                resourcepartyid,
+                resource,
+                instanceid,
+                operation,
+                ipaddress,
+                contextrequestjson,
+                decision
             )
             VALUES (
-	            @sessionid,
-	            @created,
-	            @subjectuserid,
-	            @subjectorgcode,
-	            @subjectorgnumber,
-	            @subjectparty,
-	            @resourcepartyid,
-	            @resource,
-	            @instanceid,
-	            @operation,
-	            @ipaddress,
-	            @contextrequestjson,
-	            @decision
+                @sessionid,
+                @created,
+                @subjectuserid,
+                @subjectorgcode,
+                @subjectorgnumber,
+                @subjectparty,
+                @resourcepartyid,
+                @resource,
+                @instanceid,
+                @operation,
+                @ipaddress,
+                @contextrequestjson,
+                @decision
             )
-            RETURNING *;";
+            RETURNING *;
+            """;
 
             if (authorizationEvent == null) 
             {

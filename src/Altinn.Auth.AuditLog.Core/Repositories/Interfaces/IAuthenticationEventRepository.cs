@@ -1,4 +1,4 @@
-﻿using Altinn.Auth.AuditLog.Core.Models;
+using Altinn.Auth.AuditLog.Core.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +12,11 @@ namespace Altinn.Auth.AuditLog.Core.Repositories.Interfaces
     /// </summary>
     public interface IAuthenticationEventRepository
     {
+        /// <summary>
+        /// inserts an authentication event to the database
+        /// </summary>
+        /// <param name="authenticationEvent"></param>
+        /// <returns></returns>
         Task InsertAuthenticationEvent(AuthenticationEvent authenticationEvent);
     }
 }
