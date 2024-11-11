@@ -34,7 +34,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: function-app
-          path: ./src/Functions/Altinn.Auth.AuditLog.Functions/output/*
+          path: ./src/Functions/Altinn.Auth.AuditLog.Functions/output/
+          include-hidden-files: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
