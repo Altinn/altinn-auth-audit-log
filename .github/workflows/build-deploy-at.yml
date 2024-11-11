@@ -28,7 +28,7 @@ jobs:
       - name: Build function app
         shell: bash
         working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
-        run: dotnet build --configuration Release --output ./output --runtime win-x64
+        run: dotnet publish --configuration Release --output ./output --runtime win-x64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -83,7 +83,7 @@ jobs:
       - name: Build function app
         shell: bash
         working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
-        run: dotnet build --configuration Release --output ./output --runtime win-x64
+        run: dotnet publish --configuration Release --output ./output --runtime win-x64
 
       # - name: Download built function-app
       #   uses: actions/download-artifact@v4
@@ -136,7 +136,7 @@ jobs:
       - name: Build function app
         shell: bash
         working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
-        run: dotnet build --configuration Release --output ./output
+        run: dotnet publish --configuration Release --output ./output
 
       - name: Azure Login
         uses: azure/login@v2
