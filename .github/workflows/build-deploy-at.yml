@@ -28,7 +28,7 @@ jobs:
       - name: Build function app
         shell: bash
         working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
-        run: dotnet build --configuration Release --output ./output --runtime win-x64
+        run: dotnet build --configuration Release --output ./output --runtime win
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
