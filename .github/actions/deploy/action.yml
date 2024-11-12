@@ -53,8 +53,8 @@ runs:
         FORCE_COLOR: '2'
       run: deno run -A ./.github/actions/deploy/deploy.mts
 
-    # - name: Deploy FunctionApp
-    #   uses: Azure/functions-action@v1
-    #   with:
-    #     app-name: ${{ inputs.function-app }}
-    #     package: ${{ inputs.function-app-path }}
+    - name: Deploy FunctionApp
+      uses: Azure/functions-action@v1
+      with:
+        app-name: ${{ inputs.function-app }}
+        package: ${{ inputs.function-app-path }}
