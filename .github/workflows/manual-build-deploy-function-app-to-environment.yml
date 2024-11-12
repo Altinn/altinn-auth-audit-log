@@ -1,0 +1,91 @@
+name: Manually build and publish ONLY FUNCTION-APP to a specific environments
+on:
+  workflow_dispatch:
+    inputs:
+        environment:
+          type: environment
+          description: Select the environment
+
+        ref:
+          type: string
+          description: The branch or tag to deploy
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  build-function-app:
+    name: Build Function App
+    runs-on: windows-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        shell: bash
+        working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
+        run: dotnet restore
+
+      - name: Build
+        shell: bash
+        working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        shell: bash
+        working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
+        run: dotnet publish --configuration Release --no-build --output ./output
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: function-app
+          path: ./src/Functions/Altinn.Auth.AuditLog.Functions/output/
+          include-hidden-files: true
+
+  deploy:
+    name: Deploy function app to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    needs:
+      - build-function-app
+
+    permissions:
+      id-token: write
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download built function-app
+        uses: actions/download-artifact@v4
+        with:
+          name: function-app
+          path: ./artifacts/function-app
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy FunctionApp
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
+          package: ./artifacts/function-app
