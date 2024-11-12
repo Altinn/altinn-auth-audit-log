@@ -8,8 +8,8 @@ env:
   DOTNET_VERSION: '8.0.x'
 
 jobs:
-  build:
-    name: Build
+  build-container-app:
+    name: Build Container App
     runs-on: ubuntu-latest
 
     permissions:
@@ -24,17 +24,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Build function app
-        shell: bash
-        working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
-        run: dotnet build --configuration Release --output ./output
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: function-app
-          path: ./src/Functions/Altinn.Auth.AuditLog.Functions/output
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -54,12 +43,52 @@ jobs:
           build-args: |
             SOURCE_REVISION_ID=${{ github.sha }}
 
-  deploy:
-    name: Deploy to ${{ matrix.environment }}
+  build-function-app:
+    name: Build Function App
+    runs-on: windows-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        shell: bash
+        working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
+        run: dotnet restore
+
+      - name: Build
+        shell: bash
+        working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        shell: bash
+        working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
+        run: dotnet publish --configuration Release --no-build --output ./output
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: function-app
+          path: ./src/Functions/Altinn.Auth.AuditLog.Functions/output/
+          include-hidden-files: true
+
+  deploy-container-app:
+    name: Deploy container-app to ${{ matrix.environment }}
     runs-on: ubuntu-latest
     environment: ${{ matrix.environment }}
     needs:
-      - build
+      - build-container-app
+      - build-function-app
 
     permissions:
       id-token: write
@@ -67,6 +96,7 @@ jobs:
       packages: read
 
     strategy:
+      fail-fast: false
       matrix:
         environment: [AT21, AT22, AT23, AT24]
 
