@@ -9,7 +9,7 @@ env:
 
 jobs:
   build-container-app:
-    name: Build
+    name: Build Container App
     runs-on: ubuntu-latest
 
     permissions:
@@ -44,7 +44,7 @@ jobs:
             SOURCE_REVISION_ID=${{ github.sha }}
 
   build-function-app:
-    name: Build
+    name: Build Function App
     runs-on: windows-latest
 
     permissions:
@@ -86,6 +86,7 @@ jobs:
       packages: read
 
     strategy:
+      fail-fast: false
       matrix:
         environment: [AT21, AT22, AT23, AT24]
 
@@ -113,4 +114,4 @@ jobs:
           resource-group: ${{ vars.CONTAINER_APP_RESOURCE_GROUP_NAME }}
           container-app: ${{ vars.CONTAINER_APP_NAME }}
           function-app: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
-          function-app-path: ./src/Functions/Altinn.Auth.AuditLog.Functions/output/
+          function-app-path: ./artifacts/function-app
