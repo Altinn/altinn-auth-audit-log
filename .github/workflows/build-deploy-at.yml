@@ -60,10 +60,20 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Build function app
+      - name: Restore
         shell: bash
         working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
-        run: dotnet publish --configuration Release --output ./output
+        run: dotnet restore
+
+      - name: Build
+        shell: bash
+        working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        shell: bash
+        working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
+        run: dotnet publish --configuration Release --no-build --output ./output
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -78,7 +88,6 @@ jobs:
     environment: ${{ matrix.environment }}
     needs:
       - build-container-app
-      # - build-function-app
 
     permissions:
       id-token: write
@@ -131,16 +140,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      # - name: Setup .NET
-      #   uses: actions/setup-dotnet@v4
-      #   with:
-      #     dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      # - name: Build function app
-      #   shell: bash
-      #   working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
-      #   run: dotnet publish --configuration Release --output ./output
 
       - name: Download built function-app
         uses: actions/download-artifact@v4
