@@ -132,15 +132,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+      # - name: Setup .NET
+      #   uses: actions/setup-dotnet@v4
+      #   with:
+      #     dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Build function app
-        shell: bash
-        working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
-        run: dotnet publish --configuration Release --output ./output
+      # - name: Build function app
+      #   shell: bash
+      #   working-directory: ./src/Functions/Altinn.Auth.AuditLog.Functions
+      #   run: dotnet publish --configuration Release --output ./output
+
+      - name: Download built function-app
+        uses: actions/download-artifact@v4
+        with:
+          name: function-app
+          path: ./artifacts/function-app
 
       - name: Azure Login
         uses: azure/login@v2
@@ -153,4 +159,4 @@ jobs:
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
-          package: ./src/Functions/Altinn.Auth.AuditLog.Functions/output/
+          package: ./artifacts/function-app
