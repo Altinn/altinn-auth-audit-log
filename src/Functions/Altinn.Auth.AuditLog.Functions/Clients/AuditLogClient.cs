@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -36,8 +37,10 @@ namespace Altinn.Auth.AuditLog.Functions.Clients
         /// <inheritdoc/>
         public async Task SaveAuthenticationEvent(AuthenticationEvent authEvent)
         {
-            string endpointUrl = "auditlog/api/v1/authenticationevent";
-            var (success, statusCode) = await PostAuthEventToEndpoint(authEvent, null, endpointUrl);
+            const string ENDPOINT_URL = "auditlog/api/v1/authenticationevent";
+
+            using var content = JsonContent.Create(authEvent);
+            var (success, statusCode) = await PostAuthEventToEndpoint(content, ENDPOINT_URL);
 
             if (!success)
             {
@@ -50,8 +53,10 @@ namespace Altinn.Auth.AuditLog.Functions.Clients
         /// <inheritdoc/>
         public async Task SaveAuthorizationEvent(AuthorizationEvent authorizationEvent)
         {
-            string endpointUrl = "auditlog/api/v1/authorizationevent";
-            var (success, statusCode) = await PostAuthEventToEndpoint(null, authorizationEvent, endpointUrl);
+            const string ENDPOINT_URL = "auditlog/api/v1/authorizationevent";
+
+            using var content = JsonContent.Create(authorizationEvent);
+            var (success, statusCode) = await PostAuthEventToEndpoint(content, ENDPOINT_URL);
 
             if (!success)
             {
@@ -61,19 +66,9 @@ namespace Altinn.Auth.AuditLog.Functions.Clients
             }
         }
 
-        private async Task<(bool Success, HttpStatusCode StatusCode)> PostAuthEventToEndpoint(AuthenticationEvent? authEvent, AuthorizationEvent? authorizationEvent, string endpoint)
+        private async Task<(bool Success, HttpStatusCode StatusCode)> PostAuthEventToEndpoint(HttpContent content, string endpoint)
         {
-            StringContent? requestBody = null;
-            if (authEvent != null)
-            {
-                requestBody = new StringContent(JsonSerializer.Serialize(authEvent), Encoding.UTF8, "application/json");
-            }
-            else if(authorizationEvent != null)
-            {
-                requestBody = new StringContent(JsonSerializer.Serialize(authorizationEvent), Encoding.UTF8, "application/json");
-            }
-
-            HttpResponseMessage response = await _client.PostAsync(endpoint, requestBody);
+            using HttpResponseMessage response = await _client.PostAsync(endpoint, content);
             if (!response.IsSuccessStatusCode)
             {
                 return (false, response.StatusCode);
