@@ -32,7 +32,7 @@ namespace Altinn.Auth.AuditLog
             services.Configure<KeyVaultSettings>(config.GetSection("kvSetting"));
             builder.AddAuditLogPersistence();
             builder.Services.AddSingleton<PartitionCreationHostedService>();
-            builder.Services.AddHostedService(sp => sp.GetRequiredService<PartitionCreationHostedService>());
+            //builder.Services.AddHostedService(sp => sp.GetRequiredService<PartitionCreationHostedService>());
             services.AddSingleton<IAuthenticationEventService, AuthenticationEventService>();
             services.AddSingleton<IAuthorizationEventService, AuthorizationEventService>();           
             services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
