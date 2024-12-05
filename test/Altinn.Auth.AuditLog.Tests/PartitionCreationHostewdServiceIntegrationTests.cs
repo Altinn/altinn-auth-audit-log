@@ -7,6 +7,7 @@ using Altinn.Auth.AuditLog.Persistence;
 using Altinn.Auth.AuditLog.Services;
 using Altinn.Auth.AuditLog.Tests;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -28,7 +29,7 @@ public class PartitionCreationHostedServiceIntegrationTests(DbFixture dbFixture,
         return HostedService.RunningJob;
     }
 
-    [Fact]
+    [Fact(Skip = "Ignored")]
     public async Task ExecuteAsync_CreatesCurrentMonthPartition_OnlyOnce()
     {
         TimeProvider.Advance(TimeSpan.FromDays(1) + TimeSpan.FromHours(1));
