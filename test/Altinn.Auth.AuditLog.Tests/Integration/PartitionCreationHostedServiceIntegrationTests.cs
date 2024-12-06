@@ -16,7 +16,7 @@ using Npgsql;
 using Testcontainers.PostgreSql;
 using static System.Net.Mime.MediaTypeNames;
 
-namespace Altinn.Auth.AuditLog.Tests;
+namespace Altinn.Auth.AuditLog.Tests.Integration;
 
 public class PartitionCreationHostedServiceIntegrationTests(DbFixture dbFixture, WebApplicationFixture webApplicationFixture)
         : WebApplicationTests(dbFixture, webApplicationFixture)
@@ -29,7 +29,7 @@ public class PartitionCreationHostedServiceIntegrationTests(DbFixture dbFixture,
         return HostedService.RunningJob;
     }
 
-    [Fact(Skip = "Ignored")]
+    [Fact]
     public async Task ExecuteAsync_CreatesCurrentMonthPartition_OnlyOnce()
     {
         TimeProvider.Advance(TimeSpan.FromDays(1) + TimeSpan.FromHours(1));

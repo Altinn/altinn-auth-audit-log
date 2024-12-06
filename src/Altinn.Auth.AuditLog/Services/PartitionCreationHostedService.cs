@@ -91,7 +91,7 @@ namespace Altinn.Auth.AuditLog.Services
             newJob = Task.Run(async () =>
             {
                 var token = _stoppingCts!.Token;
-                
+
                 try
                 {
                     await CreateMonthlyPartition(token);
@@ -124,20 +124,23 @@ namespace Altinn.Auth.AuditLog.Services
 
         private async Task CreateMonthlyPartition(CancellationToken cancellationToken)
         {
+            var partitions = GetPartitionsForCurrentAndAdjacentMonths();
+
+            await _partitionManagerRepository.CreatePartitions(partitions, cancellationToken);
+        }
+
+        internal IReadOnlyList<Partition> GetPartitionsForCurrentAndAdjacentMonths()
+        {
             string authenticationSchemaName = "authentication";
             string authzSchemaName = "authz";
 
             // Get current dateonly
             var now = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
 
-
             // Define the date ranges for the past, current and next month partitions
-            var currentMonthStartDate = now;
-            var currentMonthEndDate = currentMonthStartDate.AddMonths(1);
-            DateOnly pastMonthStartDate = now.AddMonths(-1);
-            DateOnly pastMonthEndDate = now;
-            DateOnly nextMonthStartDate = now.AddMonths(1);
-            DateOnly nextMonthEndDate = nextMonthStartDate.AddMonths(1);
+            var (currentMonthStartDate, currentMonthEndDate) = GetMonthStartAndEndDate(now);
+            var (pastMonthStartDate, pastMonthEndDate) = GetMonthStartAndEndDate(now.AddMonths(-1));
+            var (nextMonthStartDate, nextMonthEndDate) = GetMonthStartAndEndDate(now.AddMonths(1));
 
             // Create partition names
             var pastMonthPartitionName = $"eventlogv1_y{pastMonthStartDate.Year}m{pastMonthStartDate.Month:D2}";
@@ -145,16 +148,22 @@ namespace Altinn.Auth.AuditLog.Services
             var nextMonthPartitionName = $"eventlogv1_y{nextMonthStartDate.Year}m{nextMonthStartDate.Month:D2}";
 
             // List of partitions for both schemas
-            IReadOnlyList<Partition> partitions = [
+            return new List<Partition>
+            {
                 new Partition { SchemaName = authenticationSchemaName, Name = pastMonthPartitionName, StartDate = pastMonthStartDate, EndDate = pastMonthEndDate },
                 new Partition { SchemaName = authenticationSchemaName, Name = currentMonthPartitionName, StartDate = currentMonthStartDate, EndDate = currentMonthEndDate },
                 new Partition { SchemaName = authenticationSchemaName, Name = nextMonthPartitionName, StartDate = nextMonthStartDate, EndDate = nextMonthEndDate },
                 new Partition { SchemaName = authzSchemaName, Name = pastMonthPartitionName, StartDate = pastMonthStartDate, EndDate = pastMonthEndDate },
                 new Partition { SchemaName = authzSchemaName, Name = currentMonthPartitionName, StartDate = currentMonthStartDate, EndDate = currentMonthEndDate },
                 new Partition { SchemaName = authzSchemaName, Name = nextMonthPartitionName, StartDate = nextMonthStartDate, EndDate = nextMonthEndDate }
-            ];
+            };
+        }
 
-            await _partitionManagerRepository.CreatePartitions(partitions, cancellationToken);
+        internal (DateOnly startDate, DateOnly endDate) GetMonthStartAndEndDate(DateOnly date)
+        {
+            DateOnly startDate = new DateOnly(date.Year, date.Month, 1);
+            DateOnly endDate = startDate.AddMonths(1).AddDays(-1);
+            return (startDate, endDate);
         }
     }
 }

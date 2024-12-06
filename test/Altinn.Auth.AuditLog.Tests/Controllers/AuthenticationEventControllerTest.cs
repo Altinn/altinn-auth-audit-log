@@ -23,7 +23,7 @@ namespace Altinn.Auth.AuditLog.Tests.Controllers
             return client;
         }
 
-        [Fact(Skip = "Ignored")]
+        [Fact]
         public async Task CreateAuthenticationEvent_Ok()
         {
             using var client = CreateEventClient();
