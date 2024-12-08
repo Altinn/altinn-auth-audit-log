@@ -39,7 +39,7 @@ public class PartitionCreationHostedServiceIntegrationTests(DbFixture dbFixture,
         var currentDate = DateOnly.FromDateTime(TimeProvider.GetUtcNow().UtcDateTime);
         var currentMonth = currentDate.Month;
         var currentYear = currentDate.Year;
-        var partitionName = $"eventlogv1_y{currentYear}m{currentMonth:D2}";
+        var partitionName = $"eventlogv2_y{currentYear}m{currentMonth:D2}";
 
         var checkAuthenticationPartitionCommand = $"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='authentication' and table_name='{partitionName}');";
         await using NpgsqlCommand pgcom = DataSource.CreateCommand(checkAuthenticationPartitionCommand);

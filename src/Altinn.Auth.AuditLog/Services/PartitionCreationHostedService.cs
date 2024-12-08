@@ -143,9 +143,9 @@ namespace Altinn.Auth.AuditLog.Services
             var (nextMonthStartDate, nextMonthEndDate) = GetMonthStartAndEndDate(now.AddMonths(1));
 
             // Create partition names
-            var pastMonthPartitionName = $"eventlogv1_y{pastMonthStartDate.Year}m{pastMonthStartDate.Month:D2}";
-            var currentMonthPartitionName = $"eventlogv1_y{currentMonthStartDate.Year}m{currentMonthStartDate.Month:D2}";
-            var nextMonthPartitionName = $"eventlogv1_y{nextMonthStartDate.Year}m{nextMonthStartDate.Month:D2}";
+            var pastMonthPartitionName = $"eventlogv2_y{pastMonthStartDate.Year}m{pastMonthStartDate.Month:D2}";
+            var currentMonthPartitionName = $"eventlogv2_y{currentMonthStartDate.Year}m{currentMonthStartDate.Month:D2}";
+            var nextMonthPartitionName = $"eventlogv2_y{nextMonthStartDate.Year}m{nextMonthStartDate.Month:D2}";
 
             // List of partitions for both schemas
             return new List<Partition>
@@ -162,7 +162,7 @@ namespace Altinn.Auth.AuditLog.Services
         internal (DateOnly startDate, DateOnly endDate) GetMonthStartAndEndDate(DateOnly date)
         {
             DateOnly startDate = new DateOnly(date.Year, date.Month, 1);
-            DateOnly endDate = startDate.AddMonths(1).AddDays(-1);
+            DateOnly endDate = startDate.AddMonths(1);
             return (startDate, endDate);
         }
     }

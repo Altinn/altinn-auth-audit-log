@@ -29,7 +29,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         {
             const string INSERTAUTHZEVENT = /*strpsql*/
             """
-            INSERT INTO authz.eventlogv1(
+            INSERT INTO authz.eventlogv2(
                 sessionid,
                 created,
                 subjectuserid,
