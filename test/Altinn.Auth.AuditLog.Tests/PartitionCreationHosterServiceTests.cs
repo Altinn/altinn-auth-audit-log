@@ -20,15 +20,15 @@ public class PartitionCreationHostedServiceTests
 
         // Assert
         Assert.Equal(6, partitions.Count);
-        Assert.Contains(partitions, p => p.Name == "eventlogv1_y2023m09" && p.StartDate == new DateOnly(2023, 9, 1) && p.EndDate == new DateOnly(2023, 9, 30));
-        Assert.Contains(partitions, p => p.Name == "eventlogv1_y2023m10" && p.StartDate == new DateOnly(2023, 10, 1) && p.EndDate == new DateOnly(2023, 10, 31));
-        Assert.Contains(partitions, p => p.Name == "eventlogv1_y2023m11" && p.StartDate == new DateOnly(2023, 11, 1) && p.EndDate == new DateOnly(2023, 11, 30));
+        Assert.Contains(partitions, p => p.Name == "eventlogv2_y2023m09" && p.StartDate == new DateOnly(2023, 9, 1) && p.EndDate == new DateOnly(2023, 10, 1));
+        Assert.Contains(partitions, p => p.Name == "eventlogv2_y2023m10" && p.StartDate == new DateOnly(2023, 10, 1) && p.EndDate == new DateOnly(2023, 11, 1));
+        Assert.Contains(partitions, p => p.Name == "eventlogv2_y2023m11" && p.StartDate == new DateOnly(2023, 11, 1) && p.EndDate == new DateOnly(2023, 12, 1));
     }
 
     [Theory]
-    [InlineData(2023, 10, 15, 2023, 10, 1, 2023, 10, 31)]
-    [InlineData(2023, 2, 1, 2023, 2, 1, 2023, 2, 28)]
-    [InlineData(2024, 2, 1, 2024, 2, 1, 2024, 2, 29)] // Leap year
+    [InlineData(2023, 10, 15, 2023, 10, 1, 2023, 11, 1)]
+    [InlineData(2023, 2, 1, 2023, 2, 1, 2023, 3, 1)]
+    [InlineData(2024, 2, 1, 2024, 2, 1, 2024, 3, 1)]
     public void GetMonthStartAndEndDate_ReturnsCorrectDates(int year, int month, int day, int expectedStartYear, int expectedStartMonth, int expectedStartDay, int expectedEndYear, int expectedEndMonth, int expectedEndDay)
     {
         // Arrange
@@ -55,8 +55,8 @@ public class PartitionCreationHostedServiceTests
 
         // Assert
         Assert.Equal(6, partitions.Count);
-        Assert.Contains(partitions, p => p.Name == "eventlogv1_y2023m11" && p.StartDate == new DateOnly(2023, 11, 1) && p.EndDate == new DateOnly(2023, 11, 30));
-        Assert.Contains(partitions, p => p.Name == "eventlogv1_y2023m12" && p.StartDate == new DateOnly(2023, 12, 1) && p.EndDate == new DateOnly(2023, 12, 31));
-        Assert.Contains(partitions, p => p.Name == "eventlogv1_y2024m01" && p.StartDate == new DateOnly(2024, 1, 1) && p.EndDate == new DateOnly(2024, 1, 31));
+        Assert.Contains(partitions, p => p.Name == "eventlogv2_y2023m11" && p.StartDate == new DateOnly(2023, 11, 1) && p.EndDate == new DateOnly(2023, 12, 1));
+        Assert.Contains(partitions, p => p.Name == "eventlogv2_y2023m12" && p.StartDate == new DateOnly(2023, 12, 1) && p.EndDate == new DateOnly(2024, 1, 1));
+        Assert.Contains(partitions, p => p.Name == "eventlogv2_y2024m01" && p.StartDate == new DateOnly(2024, 1, 1) && p.EndDate == new DateOnly(2024, 2, 1));
     }
 }
