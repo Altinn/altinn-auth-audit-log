@@ -50,7 +50,7 @@ namespace Altinn.Auth.AuditLog.Persistence
                         var cmd = batch.CreateBatchCommand();
                         cmd.CommandText = /*strpsql*/$"""
                             CREATE TABLE IF NOT EXISTS {partition.SchemaName}.{partition.Name}
-                            PARTITION OF {partition.SchemaName}.eventlogv2
+                            PARTITION OF {partition.SchemaName}.eventlogv1
                             FOR VALUES FROM ('{partition.StartDate:yyyy-MM-dd}') TO ('{partition.EndDate:yyyy-MM-dd}')
                             """;
                         batch.BatchCommands.Add(cmd);
