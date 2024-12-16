@@ -162,7 +162,7 @@ namespace Altinn.Auth.AuditLog.Services
         internal (DateOnly startDate, DateOnly endDate) GetMonthStartAndEndDate(DateOnly date)
         {
             DateOnly startDate = new DateOnly(date.Year, date.Month, 1);
-            DateOnly endDate = startDate.AddMonths(1).AddDays(-1);
+            DateOnly endDate = startDate.AddMonths(1);
             return (startDate, endDate);
         }
     }
