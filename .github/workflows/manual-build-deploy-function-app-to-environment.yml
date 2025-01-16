@@ -11,7 +11,7 @@ on:
           description: The branch or tag to deploy
 
 env:
-  DOTNET_VERSION: '8.0.x'
+  DOTNET_VERSION: '9.0.x'
 
 jobs:
   build-function-app:
