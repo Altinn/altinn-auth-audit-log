@@ -79,6 +79,6 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// <summary>
         /// The user identifier which can be either a GUID or a username
         /// </summary>
-        public string? UserIdentifier { get; set; }
+        public string? SubjectUserIdentifier { get; set; }
     }
 }
