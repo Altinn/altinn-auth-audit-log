@@ -1,5 +1,5 @@
 # Building the auditlog api
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
 ARG SOURCE_REVISION_ID=LOCALBUILD
 
 COPY src .
@@ -9,7 +9,7 @@ RUN dotnet build Altinn.Auth.AuditLog.csproj -c Release -o /app_output -p Source
 RUN dotnet publish Altinn.Auth.AuditLog.csproj -c Release -o /app_output -p SourceRevisionId=${SOURCE_REVISION_ID}
 
 # Building the final image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
+FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS final
 EXPOSE 5166
 WORKDIR /app
 COPY --from=build /app_output .
