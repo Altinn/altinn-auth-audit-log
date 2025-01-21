@@ -77,8 +77,8 @@ namespace Altinn.Auth.AuditLog.Core.Models
         public XacmlContextDecision Decision { get; set; }
 
         /// <summary>
-        /// The user identifier which can be either a GUID or a username
+        /// The party identifier for the subject
         /// </summary>
-        public string? SubjectUserIdentifier { get; set; }
+        public string? SubjectPartyUuid { get; set; }
     }
 }

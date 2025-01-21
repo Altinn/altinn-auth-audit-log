@@ -1,2 +1,2 @@
 ALTER TABLE authz.eventlogv1
-ADD subject_user_identifier VARCHAR(255);
+ADD subject_party_uuid VARCHAR(255);

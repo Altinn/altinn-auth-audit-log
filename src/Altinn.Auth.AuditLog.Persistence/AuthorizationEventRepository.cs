@@ -43,7 +43,7 @@ namespace Altinn.Auth.AuditLog.Persistence
                 ipaddress,
                 contextrequestjson,
                 decision,
-                subject_user_identifier
+                subject_party_uuid
             )
             VALUES (
                 @sessionid,
@@ -59,7 +59,7 @@ namespace Altinn.Auth.AuditLog.Persistence
                 @ipaddress,
                 @contextrequestjson,
                 @decision,
-                @subjectuseridentifier
+                @subjectpartyuuid
             )
             RETURNING *;
             """;
@@ -100,7 +100,7 @@ namespace Altinn.Auth.AuditLog.Persistence
                 pgcom.Parameters.AddWithValue("ipaddress", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.IpAdress) ? DBNull.Value : authorizationEvent.IpAdress);
                 pgcom.Parameters.AddWithValue("contextrequestjson", NpgsqlTypes.NpgsqlDbType.Jsonb, authorizationEvent.ContextRequestJson);
                 pgcom.Parameters.AddWithValue("decision", NpgsqlTypes.NpgsqlDbType.Integer, Convert.ToInt32(authorizationEvent.Decision));
-                pgcom.Parameters.AddWithValue("subjectuseridentifier", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.SubjectUserIdentifier) ? DBNull.Value : authorizationEvent.SubjectUserIdentifier);
+                pgcom.Parameters.AddWithValue("subjectpartyuuid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.SubjectPartyUuid) ? DBNull.Value : authorizationEvent.SubjectPartyUuid);
 
                 await pgcom.ExecuteNonQueryAsync();
             }
