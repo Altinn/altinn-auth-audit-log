@@ -1,13 +1,15 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <UserSecretsId>f8fe67e3-905c-460e-a481-846283a06965</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Altinn.Authorization.ABAC" Version="0.0.8" />
+    <PackageReference Include="Azure.Data.Tables" Version="12.9.1" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.23.0" />
     <PackageReference Include="Azure.Storage.Files.Shares" Version="12.21.0" />
     <PackageReference Include="Azure.Storage.Queues" Version="12.21.0" />

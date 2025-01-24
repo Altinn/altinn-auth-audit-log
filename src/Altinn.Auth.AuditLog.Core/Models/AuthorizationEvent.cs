@@ -1,4 +1,4 @@
-﻿using Altinn.Auth.AuditLog.Core.Enum;
+using Altinn.Auth.AuditLog.Core.Enum;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 
@@ -75,5 +75,10 @@ namespace Altinn.Auth.AuditLog.Core.Models
         /// Decision for the authorization request
         /// </summary>
         public XacmlContextDecision Decision { get; set; }
+
+        /// <summary>
+        /// The party identifier for the subject
+        /// </summary>
+        public string? SubjectPartyUuid { get; set; }
     }
 }
