@@ -54,7 +54,7 @@ runs:
       run: deno run -A ./.github/actions/deploy/deploy.mts
 
     - name: Deploy FunctionApp
-      uses: Azure/functions-action@v1
+      uses: Azure/functions-action@fd80521afbba9a2a76a99ba1acc07aff8d733d11 # v1
       with:
         app-name: ${{ inputs.function-app }}
         package: ${{ inputs.function-app-path }}
