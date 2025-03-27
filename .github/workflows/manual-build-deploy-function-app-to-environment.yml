@@ -24,12 +24,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           ref: ${{ github.event.inputs.ref }}
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -49,7 +49,7 @@ jobs:
         run: dotnet publish --configuration Release --no-build --output ./output
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: function-app
           path: ./src/Functions/Altinn.Auth.AuditLog.Functions/output/
@@ -69,23 +69,23 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Download built function-app
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4
         with:
           name: function-app
           path: ./artifacts/function-app
 
       - name: Azure Login
-        uses: azure/login@v2
+        uses: azure/login@a65d910e8af852a8061c627c456678983e180302 # v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy FunctionApp
-        uses: Azure/functions-action@v1
+        uses: Azure/functions-action@fd80521afbba9a2a76a99ba1acc07aff8d733d11 # v1
         with:
           app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
           package: ./artifacts/function-app
