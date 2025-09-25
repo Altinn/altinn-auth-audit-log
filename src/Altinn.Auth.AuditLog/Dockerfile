@@ -1,6 +1,6 @@
 #See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0@sha256:1af4114db9ba87542a3f23dbb5cd9072cad7fcc8505f6e9131d1feb580286a6f AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:97fd62765599e830f70d05ebf086aa341b59bc5f6be00d0ad0ba1e04f8614b35 AS base
 WORKDIR /app
 EXPOSE 80
 EXPOSE 443
