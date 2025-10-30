@@ -8,9 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Altinn.Authorization.ServiceDefaults" Version="4.3.0" />
-    <PackageReference Include="Altinn.Authorization.ServiceDefaults.Npgsql" Version="4.3.0" />
-    <PackageReference Include="Altinn.Authorization.ServiceDefaults.Npgsql.Yuniql" Version="4.3.0" />
+    <PackageReference Include="Altinn.Authorization.ServiceDefaults" Version="4.4.0" />
+    <PackageReference Include="Altinn.Authorization.ServiceDefaults.Npgsql" Version="4.4.0" />
+    <PackageReference Include="Altinn.Authorization.ServiceDefaults.Npgsql.Yuniql" Version="4.4.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
     <PackageReference Include="Npgsql" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.10" />
