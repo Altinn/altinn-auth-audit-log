@@ -37,8 +37,9 @@ namespace Altinn.Auth.AuditLog
             services.AddSingleton<IAuthorizationEventService, AuthorizationEventService>();           
             services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
 
-            builder.Services.AddControllers(
-                options => options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
+            builder.Services
+                .AddControllers(options => options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true)
+                .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
             builder.Services.AddScoped<ValidationFilterAttribute>();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
