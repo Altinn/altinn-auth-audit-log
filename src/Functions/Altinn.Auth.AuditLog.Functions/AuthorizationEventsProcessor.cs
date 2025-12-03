@@ -1,12 +1,17 @@
 using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
+using CommunityToolkit.HighPerformance;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.IO;
 using System.Buffers;
 using System.Globalization;
+using System.IO.Compression;
 
 namespace Altinn.Auth.AuditLog.Functions;
 
 public class AuthorizationEventsProcessor
 {
+    private static readonly RecyclableMemoryStreamManager _manager = new();
+
     private readonly IAuditLogClient _auditLogClient;
 
     public AuthorizationEventsProcessor(
@@ -37,11 +42,26 @@ public class AuthorizationEventsProcessor
             var rest = raw[2..];
             return version switch
             {
+                01 => ProcessV01(rest, cancellationToken),
                 _ => ProcessInvalidVersion(version, cancellationToken),
             };
         }
 
         return ProcessLegacyVersion(raw, cancellationToken); 
+    }
+
+    // brotli encoded JSON
+    private async Task ProcessV01(ReadOnlyMemory<byte> binaryData, CancellationToken cancellationToken)
+    {
+        using var jsonStream = _manager.GetStream(nameof(ProcessV01));
+
+        {
+            using var receivedStream = binaryData.AsStream();
+            using var decodedStream = new BrotliStream(receivedStream, CompressionMode.Decompress);
+            decodedStream.CopyTo(jsonStream); // No point in doing async here, as everything is in-memory at this point.
+        }
+
+        await _auditLogClient.SaveAuthorizationEvent(jsonStream.GetReadOnlySequence(), cancellationToken);
     }
 
     private async Task ProcessLegacyVersion(ReadOnlyMemory<byte> base64EncodedJson, CancellationToken cancellationToken)
@@ -57,7 +77,8 @@ public class AuthorizationEventsProcessor
                 throw new InvalidOperationException("Could not decode entire base64 input");
             }
 
-            await _auditLogClient.SaveAuthorizationEvent(raw.AsMemory(0, bytesWritten), cancellationToken);
+            var sequence = new ReadOnlySequence<byte>(raw.AsMemory(0, bytesWritten));
+            await _auditLogClient.SaveAuthorizationEvent(sequence, cancellationToken);
         }
         finally
         {
