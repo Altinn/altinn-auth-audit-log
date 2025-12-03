@@ -1,34 +1,78 @@
-using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
 using Microsoft.Azure.Functions.Worker;
+using System.Buffers;
+using System.Globalization;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
-namespace Altinn.Auth.AuditLog.Functions
+namespace Altinn.Auth.AuditLog.Functions;
+
+public class AuthorizationEventsProcessor
 {
-    public class AuthorizationEventsProcessor
+    private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web)
     {
-        private readonly IAuditLogClient _auditLogClient;
+        PropertyNameCaseInsensitive = true,
+    };
 
-        public AuthorizationEventsProcessor(
-            IAuditLogClient auditLogClient)
+    private readonly IAuditLogClient _auditLogClient;
+
+    public AuthorizationEventsProcessor(
+        IAuditLogClient auditLogClient)
+    {
+        _auditLogClient = auditLogClient;
+    }
+
+    /// <summary>
+    /// Reads authorization event from authorization eventlog queue and  post it to auditlog api
+    /// </summary>
+    [Function(nameof(AuthorizationEventsProcessor))]
+    public Task Run(
+        [QueueTrigger("authorizationeventlog", Connection = "QueueStorage")] BinaryData item,
+        FunctionContext executionContext,
+        CancellationToken cancellationToken)
+    {
+        var raw = item.ToMemory();
+        var span = raw.Span;
+        if (span.Length < 2)
         {
-            _auditLogClient = auditLogClient;
+            return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Reads authorization event from authorization eventlog queue and  post it to auditlog api
-        /// </summary>
-        [Function(nameof(AuthorizationEventsProcessor))]
-        public async Task Run([Microsoft.Azure.Functions.Worker.QueueTrigger("authorizationeventlog", Connection = "QueueStorage")] string item, FunctionContext executionContext)
+        var firstBytes = span[0..2];
+        if (ushort.TryParse(firstBytes, NumberStyles.None, provider: null, out var version))
         {
-            var options = new JsonSerializerOptions
+            var rest = raw[2..];
+            return version switch
             {
-                PropertyNameCaseInsensitive = true,
+                _ => ProcessInvalidVersion(version, cancellationToken),
             };
-            options.Converters.Add(new JsonStringEnumConverter());
-            AuthorizationEvent? authorizationEvent = JsonSerializer.Deserialize<AuthorizationEvent>(item, options);
-            await _auditLogClient.SaveAuthorizationEvent(authorizationEvent);
         }
+
+        return ProcessLegacyVersion(raw, cancellationToken); 
+    }
+
+    private async Task ProcessLegacyVersion(ReadOnlyMemory<byte> base64EncodedJson, CancellationToken cancellationToken)
+    {
+        // Data shrinks when decoded from base64, so the original length will fit the decoded byte array
+        var raw = ArrayPool<byte>.Shared.Rent(base64EncodedJson.Length);
+
+        try
+        {
+            System.Buffers.Text.Base64.DecodeFromUtf8(base64EncodedJson.Span, raw, out int bytesConsumed, out int bytesWritten);
+            if (bytesConsumed != base64EncodedJson.Length)
+            {
+                throw new InvalidOperationException("Could not decode entire base64 input");
+            }
+
+            await _auditLogClient.SaveAuthorizationEvent(raw.AsMemory(0, bytesWritten), cancellationToken);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(raw);
+        }
+    }
+
+    private async Task ProcessInvalidVersion(ushort version, CancellationToken cancellationToken)
+    {
+        throw new InvalidOperationException($"Unsupported authorization event version: {version}");
     }
 }

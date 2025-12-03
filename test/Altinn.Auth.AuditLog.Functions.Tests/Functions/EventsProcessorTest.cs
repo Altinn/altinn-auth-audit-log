@@ -1,22 +1,13 @@
 using Altinn.Auth.AuditLog.Core.Enum;
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
-using Azure.Messaging;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Altinn.Auth.AuditLog.Functions.Tests.Functions
 {
     public  class EventsProcessorTest
     {
-        Mock<ILogger<EventsProcessor>> _loggerMock = new Mock<ILogger<EventsProcessor>>();
-
         [Fact]
         public async Task Run_ConfirmDeserializationOfAuthenticationEvent()
         {
@@ -34,13 +25,13 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Functions
             };
 
         Mock<IAuditLogClient> clientMock = new();
-            clientMock.Setup(c => c.SaveAuthenticationEvent(It.Is<AuthenticationEvent>(c => AssertExpectedAuthenticationEvent(c, expectedAuthenticationEvent))))
+            clientMock.Setup(c => c.SaveAuthenticationEvent(It.Is<AuthenticationEvent>(c => AssertExpectedAuthenticationEvent(c, expectedAuthenticationEvent)), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
-            EventsProcessor sut = new EventsProcessor(_loggerMock.Object, clientMock.Object);
+            EventsProcessor sut = new EventsProcessor(new NullLogger<EventsProcessor>(), clientMock.Object);
 
             // Act
-            await sut.Run(serializedAuthenticationEvent, null);
+            await sut.Run(serializedAuthenticationEvent, null!, CancellationToken.None);
 
             // Assert
 

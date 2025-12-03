@@ -48,7 +48,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
 
             var client = new AuditLogClient(_loggerMock.Object, new HttpClient(handlerMock.Object), _platformSettings);
             // Act
-            await client.SaveAuthenticationEvent(authenticationEvent);
+            await client.SaveAuthenticationEvent(authenticationEvent, CancellationToken.None);
 
             // Assert
             handlerMock.VerifyAll();
@@ -66,7 +66,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
 
             // Act
 
-            await Assert.ThrowsAsync<HttpRequestException>(async () => await client.SaveAuthenticationEvent(authenticationEvent));
+            await Assert.ThrowsAsync<HttpRequestException>(async () => await client.SaveAuthenticationEvent(authenticationEvent, CancellationToken.None));
 
             // Assert
             handlerMock.VerifyAll();
@@ -91,7 +91,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
 
             var client = new AuditLogClient(_loggerMock.Object, new HttpClient(handlerMock.Object), _platformSettings);
             // Act
-            await client.SaveAuthorizationEvent(TestDataHelper.GetAuthorizationEvent());
+            await client.SaveAuthorizationEvent(TestDataHelper.GetAuthorizationEvent_JsonData(), CancellationToken.None);
 
             // Assert
             handlerMock.VerifyAll();
@@ -109,7 +109,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
 
             // Act
 
-            await Assert.ThrowsAsync<HttpRequestException>(async () => await client.SaveAuthorizationEvent(TestDataHelper.GetAuthorizationEvent()));
+            await Assert.ThrowsAsync<HttpRequestException>(async () => await client.SaveAuthorizationEvent(TestDataHelper.GetAuthorizationEvent_JsonData(), CancellationToken.None));
 
             // Assert
             handlerMock.VerifyAll();
