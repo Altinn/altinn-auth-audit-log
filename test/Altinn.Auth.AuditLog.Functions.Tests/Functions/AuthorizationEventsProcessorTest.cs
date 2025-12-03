@@ -25,6 +25,21 @@ public  class AuthorizationEventsProcessorTest
     }
 
     [Fact]
+    public async Task Run_LegacyContent_NonBase64_ForwardsToClient()
+    {
+        var authorizationEvent = TestDataHelper.GetAuthorizationEvent_LegacyFormat_NonBase64();
+        Mock<IAuditLogClient> clientMock = CreateMockThatExpectsTestEvent();
+
+        AuthorizationEventsProcessor sut = new AuthorizationEventsProcessor(clientMock.Object);
+
+        // Act
+        await sut.Run(authorizationEvent, null!, CancellationToken.None);
+
+        // Assert
+        clientMock.VerifyAll();
+    }
+
+    [Fact]
     public async Task Run_V1Content_BrotliDecidesAndForwardsToClient()
     {
         var authorizationEvent = TestDataHelper.GetAuthorizationEvent_V1Format();
