@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -79,9 +80,9 @@ namespace Altinn.Auth.AuditLog.Persistence
                 throw new ArgumentNullException(nameof(authorizationEvent), "Operation must not be null or empty");
             }
 
-            if (string.IsNullOrEmpty(authorizationEvent.ContextRequestJson))
+            if (authorizationEvent.ContextRequestJson.ValueKind != JsonValueKind.Object)
             {
-                throw new ArgumentNullException(nameof(authorizationEvent), "Context request must not be null or empty");
+                throw new ArgumentNullException(nameof(authorizationEvent), "Context request must be an object");
             }
 
             try

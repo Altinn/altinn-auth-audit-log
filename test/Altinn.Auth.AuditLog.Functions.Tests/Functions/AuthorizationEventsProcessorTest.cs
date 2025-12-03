@@ -25,7 +25,7 @@ public  class AuthorizationEventsProcessorTest
                 Assert.Equal(expectedAuthorizationEvent.Resource, actualAuthorizationEvent.Resource);
                 Assert.Equal(expectedAuthorizationEvent.IpAdress, actualAuthorizationEvent.IpAdress);
                 Assert.Equal(expectedAuthorizationEvent.Created, actualAuthorizationEvent.Created);
-                Assert.Equal(expectedAuthorizationEvent.ContextRequestJson, actualAuthorizationEvent.ContextRequestJson);
+                Assert.Equal(expectedAuthorizationEvent.ContextRequestJson, actualAuthorizationEvent.ContextRequestJson, JsonElement.DeepEquals);
             })
             .Returns(Task.CompletedTask);
 
