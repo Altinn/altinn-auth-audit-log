@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -91,7 +92,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
 
             var client = new AuditLogClient(_loggerMock.Object, new HttpClient(handlerMock.Object), _platformSettings);
             // Act
-            await client.SaveAuthorizationEvent(TestDataHelper.GetAuthorizationEvent_JsonData(), CancellationToken.None);
+            await client.SaveAuthorizationEvent(new ReadOnlySequence<byte>(TestDataHelper.GetAuthorizationEvent_JsonData()), CancellationToken.None);
 
             // Assert
             handlerMock.VerifyAll();
@@ -109,7 +110,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
 
             // Act
 
-            await Assert.ThrowsAsync<HttpRequestException>(async () => await client.SaveAuthorizationEvent(TestDataHelper.GetAuthorizationEvent_JsonData(), CancellationToken.None));
+            await Assert.ThrowsAsync<HttpRequestException>(async () => await client.SaveAuthorizationEvent(new ReadOnlySequence<byte>(TestDataHelper.GetAuthorizationEvent_JsonData()), CancellationToken.None));
 
             // Assert
             handlerMock.VerifyAll();
