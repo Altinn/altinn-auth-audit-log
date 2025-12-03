@@ -66,6 +66,14 @@ public class AuthorizationEventsProcessor
 
     private async Task ProcessLegacyVersion(ReadOnlyMemory<byte> base64EncodedJson, CancellationToken cancellationToken)
     {
+        // Check if data starts with `{`, if it does it's not base64 encoded
+        if (base64EncodedJson.Span[0] == '{')
+        {
+            var sequence = new ReadOnlySequence<byte>(base64EncodedJson);
+            await _auditLogClient.SaveAuthorizationEvent(sequence, cancellationToken);
+            return;
+        }
+
         // Data shrinks when decoded from base64, so the original length will fit the decoded byte array
         var raw = ArrayPool<byte>.Shared.Rent(base64EncodedJson.Length);
 
@@ -74,7 +82,7 @@ public class AuthorizationEventsProcessor
             System.Buffers.Text.Base64.DecodeFromUtf8(base64EncodedJson.Span, raw, out int bytesConsumed, out int bytesWritten);
             if (bytesConsumed != base64EncodedJson.Length)
             {
-                throw new InvalidOperationException("Could not decode entire base64 input");
+                throw new InvalidOperationException($"Could not decode entire base64 input (bytes consumed: {bytesConsumed}, input length: {base64EncodedJson.Length})");
             }
 
             var sequence = new ReadOnlySequence<byte>(raw.AsMemory(0, bytesWritten));
