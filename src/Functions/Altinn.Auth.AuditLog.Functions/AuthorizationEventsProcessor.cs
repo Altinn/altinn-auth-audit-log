@@ -2,17 +2,11 @@ using Altinn.Auth.AuditLog.Functions.Clients.Interfaces;
 using Microsoft.Azure.Functions.Worker;
 using System.Buffers;
 using System.Globalization;
-using System.Text.Json;
 
 namespace Altinn.Auth.AuditLog.Functions;
 
 public class AuthorizationEventsProcessor
 {
-    private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNameCaseInsensitive = true,
-    };
-
     private readonly IAuditLogClient _auditLogClient;
 
     public AuthorizationEventsProcessor(
