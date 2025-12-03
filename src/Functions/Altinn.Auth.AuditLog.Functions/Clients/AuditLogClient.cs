@@ -15,7 +15,8 @@ namespace Altinn.Auth.AuditLog.Functions.Clients;
 /// <summary>
 /// Integration to Auditlog api
 /// </summary>
-public class AuditLogClient : IAuditLogClient
+public partial class AuditLogClient
+    : IAuditLogClient
 {
     private static readonly MediaTypeHeaderValue _jsonContentType = new("application/json", charSet: "utf-8");
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new(JsonSerializerDefaults.Web);
@@ -39,14 +40,7 @@ public class AuditLogClient : IAuditLogClient
         const string ENDPOINT_URL = "auditlog/api/v1/authenticationevent";
 
         using var content = JsonContent.Create(authEvent, options: _jsonSerializerOptions);
-        var (success, statusCode) = await PostAuthEventToEndpoint(content, ENDPOINT_URL, cancellationToken);
-
-        if (!success)
-        {
-            var msg = $"// SaveAuthenticationEvent failed with status code {statusCode}";
-            _logger.LogError("SaveAuthenticationEvent failed with status code {statusCode}", statusCode);
-            throw new HttpRequestException(msg);
-        }
+        await PostAuthEventToEndpoint(content, ENDPOINT_URL, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -57,24 +51,23 @@ public class AuditLogClient : IAuditLogClient
         using var stream = authorizationEvent.AsStream();
         using var content = new StreamContent(stream);
         content.Headers.ContentType = _jsonContentType;
-
-        var (success, statusCode) = await PostAuthEventToEndpoint(content, ENDPOINT_URL, cancellationToken);
-        if (!success)
-        {
-            string msg = $"SaveAuthorizationEvent failed with status code {statusCode}";
-            _logger.LogError("SaveAuthorizationEvent failed with status code {statusCode}", statusCode);
-            throw new HttpRequestException(msg);
-        }
+        await PostAuthEventToEndpoint(content, ENDPOINT_URL, cancellationToken);
     }
 
-    private async Task<(bool Success, HttpStatusCode StatusCode)> PostAuthEventToEndpoint(HttpContent content, string endpoint, CancellationToken cancellationToken)
+    private async Task PostAuthEventToEndpoint(HttpContent content, string endpoint, CancellationToken cancellationToken)
     {
         using HttpResponseMessage response = await _client.PostAsync(endpoint, content, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            return (false, response.StatusCode);
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            Log.RequestFailed(_logger, endpoint, response.StatusCode, responseContent);
+            throw new HttpRequestException(HttpRequestError.InvalidResponse, $"POST to {endpoint} failed with status code {response.StatusCode}", statusCode: response.StatusCode);
         }
+    }
 
-        return (true, response.StatusCode);
+    private sealed partial class Log
+    {
+        [LoggerMessage(1, LogLevel.Error, "POST to {Endpoint} failed with status code {StatusCode}. Response content: {ResponseContent}")]
+        public static partial void RequestFailed(ILogger logger, string endpoint, HttpStatusCode statusCode, string responseContent);
     }
 }

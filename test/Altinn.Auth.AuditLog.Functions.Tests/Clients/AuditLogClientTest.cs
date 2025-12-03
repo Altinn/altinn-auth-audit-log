@@ -6,6 +6,7 @@ using Altinn.Auth.AuditLog.Functions.Configuration;
 using Altinn.Auth.AuditLog.Functions.Tests.Helpers;
 using Azure.Messaging;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
@@ -21,7 +22,6 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
 {
     public class AuditLogClientTest
     {
-        Mock<ILogger<IAuditLogClient>> _loggerMock = new Mock<ILogger<IAuditLogClient>>();
         IOptions<PlatformSettings> _platformSettings = Options.Create(new PlatformSettings
         {
             AuditLogApiEndpoint = "https://platform.test.altinn.cloud/"
@@ -47,7 +47,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
                 "https://platform.test.altinn.cloud/auditlog/api/v1/authenticationevent",
                 HttpStatusCode.OK);
 
-            var client = new AuditLogClient(_loggerMock.Object, new HttpClient(handlerMock.Object), _platformSettings);
+            var client = new AuditLogClient(new NullLogger<AuditLogClient>(), new HttpClient(handlerMock.Object), _platformSettings);
             // Act
             await client.SaveAuthenticationEvent(authenticationEvent, CancellationToken.None);
 
@@ -71,12 +71,6 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
 
             // Assert
             handlerMock.VerifyAll();
-            _loggerMock.Verify(x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("SaveAuthenticationEvent failed with status code ServiceUnavailable")),
-                It.IsAny<Exception>(),
-                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()), Times.Once);
         }
 
         /// <summary>
@@ -90,7 +84,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
                 "https://platform.test.altinn.cloud/auditlog/api/v1/authorizationevent",
                 HttpStatusCode.OK);
 
-            var client = new AuditLogClient(_loggerMock.Object, new HttpClient(handlerMock.Object), _platformSettings);
+            var client = new AuditLogClient(new NullLogger<AuditLogClient>(), new HttpClient(handlerMock.Object), _platformSettings);
             // Act
             await client.SaveAuthorizationEvent(new ReadOnlySequence<byte>(TestDataHelper.GetAuthorizationEvent_JsonData()), CancellationToken.None);
 
@@ -114,12 +108,6 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
 
             // Assert
             handlerMock.VerifyAll();
-            _loggerMock.Verify(x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("SaveAuthorizationEvent failed with status code ServiceUnavailable")),
-                It.IsAny<Exception>(),
-                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()), Times.Once);
         }
 
         private static Mock<HttpMessageHandler> CreateMessageHandlerMock(string clientEndpoint, HttpStatusCode statusCode)
@@ -141,7 +129,7 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Clients
         private AuditLogClient CreateTestInstance(HttpMessageHandler messageHandlerMock)
         {
             return new AuditLogClient(
-                  _loggerMock.Object,
+                  new NullLogger<AuditLogClient>(),
                   new HttpClient(messageHandlerMock),
                   _platformSettings);
         }        
