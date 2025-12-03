@@ -45,6 +45,14 @@ public static class TestDataHelper
         return binaryData;
     }
 
+    public static BinaryData GetAuthorizationEvent_LegacyFormat_NonBase64()
+    {
+        var utf8Bytes = GetAuthorizationEvent_JsonData();
+        var binaryData = BinaryData.FromBytes(utf8Bytes);
+
+        return binaryData;
+    }
+
     public static BinaryData GetAuthorizationEvent_V1Format()
     {
         var authorizationEvent = GetAuthorizationEvent();
