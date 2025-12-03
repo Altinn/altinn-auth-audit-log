@@ -8,12 +8,12 @@ namespace Altinn.Auth.AuditLog.Functions.Clients.Interfaces
         /// Posts an authentication event to the auditlog api.
         /// </summary>
         /// <param name="authEvent">The authevent to be created</param>
-        Task SaveAuthenticationEvent(AuthenticationEvent authEvent);
+        Task SaveAuthenticationEvent(AuthenticationEvent authEvent, CancellationToken cancellationToken);
 
         /// <summary>
         /// Posts an authorization event to the auditlog api.
         /// </summary>
         /// <param name="authEvent">The authorization event to be created</param>
-        Task SaveAuthorizationEvent(AuthorizationEvent authorizationEvent);
+        Task SaveAuthorizationEvent(ReadOnlyMemory<byte> authorizationEvent, CancellationToken cancellationToken);
     }
 }

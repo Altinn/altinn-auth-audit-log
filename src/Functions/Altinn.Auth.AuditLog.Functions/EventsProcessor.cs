@@ -25,12 +25,15 @@ namespace Altinn.Auth.AuditLog.Functions
         /// Reads cloud event from eventlog queue and post it to auditlog api
         /// </summary>
         [Function(nameof(EventsProcessor))]
-        public async Task Run([Microsoft.Azure.Functions.Worker.QueueTrigger("eventlog", Connection = "QueueStorage")] string item, FunctionContext executionContext)
+        public async Task Run(
+            [QueueTrigger("eventlog", Connection = "QueueStorage")] string item,
+            FunctionContext executionContext,
+            CancellationToken cancellationToken)
         {
             var options = new JsonSerializerOptions();
             options.Converters.Add(new JsonStringEnumConverter());
             AuthenticationEvent authEvent = JsonSerializer.Deserialize<AuthenticationEvent>(item, options);
-            await _auditLogClient.SaveAuthenticationEvent(authEvent);
+            await _auditLogClient.SaveAuthenticationEvent(authEvent, cancellationToken);
 
         }
     }

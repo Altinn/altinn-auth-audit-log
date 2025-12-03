@@ -1,4 +1,5 @@
 using Altinn.Auth.AuditLog.Core.Models;
+using System.Text.Json;
 
 namespace Altinn.Auth.AuditLog.Functions.Tests.Helpers
 {
@@ -21,6 +22,22 @@ namespace Altinn.Auth.AuditLog.Functions.Tests.Helpers
             };
 
             return authorizationEvent;
+        }
+
+        public static byte[] GetAuthorizationEvent_JsonData()
+        {
+            var authorizationEvent = GetAuthorizationEvent();
+
+            return JsonSerializer.SerializeToUtf8Bytes(authorizationEvent, JsonSerializerOptions.Web);
+        }
+
+        public static BinaryData GetAuthorizationEvent_LegacyFormat()
+        {
+            var utf8Bytes = GetAuthorizationEvent_JsonData();
+            var base64Content = Convert.ToBase64String(utf8Bytes);
+            var binaryData = BinaryData.FromString(base64Content);
+
+            return binaryData;
         }
     }
 }
