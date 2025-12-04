@@ -11,7 +11,7 @@ runs:
   steps:
     - uses: denoland/setup-deno@v1
       with:
-        deno-version: v1.x
+        deno-version: 2.x
 
     - name: Get version number
       id: get_version_number
