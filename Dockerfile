@@ -9,7 +9,7 @@ RUN dotnet build Altinn.Auth.AuditLog.csproj -c Release -o /app_output -p Source
 RUN dotnet publish Altinn.Auth.AuditLog.csproj -c Release -o /app_output -p SourceRevisionId=${SOURCE_REVISION_ID}
 
 # Building the final image
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine@sha256:be36809e32840cf9fcbf1a3366657c903e460d3c621d6593295a5e5d02268a0d AS final
+FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine@sha256:d727c96021c7223ee06223e6d01472b8ea6302ca3561782835c2ff2e5c3d063c AS final
 EXPOSE 5166
 WORKDIR /app
 COPY --from=build /app_output .
