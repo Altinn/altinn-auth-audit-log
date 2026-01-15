@@ -12,9 +12,12 @@ if (app.Environment.IsDevelopment())
     // Enable higher level of detail in exceptions related to JWT validation
     IdentityModelEventSource.ShowPII = true;
 
-    // Enable Swagger
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    // Enable OpenAPI with modern Scalar UI
+    app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "v1");
+    });
 }
 
 app.UseAuthentication();
