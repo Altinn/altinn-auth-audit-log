@@ -4,7 +4,7 @@ on:
     types: [released]
 
 env:
-  DOTNET_VERSION: '9.0.x'
+  DOTNET_VERSION: '10.0.x'
   REGISTRY: ghcr.io
   REPOSITORY: altinn/altinn-auth-audit-log
 

@@ -1,6 +1,7 @@
-﻿using Altinn.Auth.AuditLog.Core.Models;
+using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Services.Interfaces;
 using Altinn.Auth.AuditLog.Filters;
+using Azure.Storage.Queues;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 
