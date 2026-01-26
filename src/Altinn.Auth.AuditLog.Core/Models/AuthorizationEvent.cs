@@ -78,7 +78,8 @@ public class AuthorizationEvent
     /// <summary>
     /// Decision for the authorization request
     /// </summary>
-    public XacmlContextDecision Decision { get; set; }
+    [Required]
+    public XacmlContextDecision? Decision { get; set; }
 
     /// <summary>
     /// The party identifier for the subject
