@@ -3,6 +3,7 @@ using CommunityToolkit.HighPerformance;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.IO;
 using System.Buffers;
+using System.Buffers.Text;
 using System.Globalization;
 using System.IO.Compression;
 
@@ -24,7 +25,7 @@ public class AuthorizationEventsProcessor
     /// Reads authorization event from authorization eventlog queue and  post it to auditlog api
     /// </summary>
     [Function(nameof(AuthorizationEventsProcessor))]
-    public Task Run(
+    public async Task Run(
         [QueueTrigger("authorizationeventlog", Connection = "QueueStorage")] BinaryData item,
         FunctionContext executionContext,
         CancellationToken cancellationToken)
@@ -33,21 +34,68 @@ public class AuthorizationEventsProcessor
         var span = raw.Span;
         if (span.Length < 2)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        var firstBytes = span[0..2];
-        if (ushort.TryParse(firstBytes, NumberStyles.None, provider: null, out var version))
+        var buffer = ArrayPool<byte>.Shared.Rent(raw.Length);
+        try
         {
-            var rest = raw[2..];
-            return version switch
+            if (TryGetMessageVersion(raw, buffer, out var version, out var data))
             {
-                01 => ProcessV01(rest, cancellationToken),
-                _ => ProcessInvalidVersion(version, cancellationToken),
-            };
+                switch (version)
+                {
+                    case 01:
+                        await ProcessV01(data, cancellationToken);
+                        return;
+
+                    default:
+                        await ProcessInvalidVersion(version, cancellationToken);
+                        return;
+                }
+            }
+            else
+            {
+                await ProcessLegacyVersion(raw, cancellationToken);
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
+        }
+    }
+
+    private static bool TryGetMessageVersion(ReadOnlyMemory<byte> raw, byte[] buffer, out ushort version, out ReadOnlyMemory<byte> data)
+    {
+        if (raw.Span[0] == (byte)'{')
+        {
+            version = default;
+            data = default;
+            return false;
         }
 
-        return ProcessLegacyVersion(raw, cancellationToken); 
+        var firstBytes = raw.Span[0..2];
+        if (ushort.TryParse(firstBytes, NumberStyles.None, provider: null, out version))
+        {
+            data = raw[2..];
+            return true;
+        }
+
+        var outcome = Base64.DecodeFromUtf8(raw.Span, buffer, out int bytesConsumed, out int bytesWritten);
+        if (outcome != OperationStatus.Done || bytesConsumed != raw.Length)
+        {
+            throw new FormatException("Failed to decode base64 encoded message");
+        }
+
+        firstBytes = buffer.AsSpan(0, 2);
+        if (ushort.TryParse(firstBytes, NumberStyles.None, provider: null, out version))
+        {
+            data = buffer.AsMemory(2, bytesWritten - 2);
+            return true;
+        }
+
+        version = default;
+        data = default;
+        return false;
     }
 
     // brotli encoded JSON
