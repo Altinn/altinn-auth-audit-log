@@ -72,4 +72,13 @@ public static class TestDataHelper
 
         return BinaryData.FromBytes(data);
     }
+
+    public static BinaryData GetAuthorizationEvent_V1Format_DoubleBase64Encoded()
+    {
+        var singleEncoded = GetAuthorizationEvent_V1Format();
+        var base64Content = Convert.ToBase64String(singleEncoded.ToArray());
+        var binaryData = BinaryData.FromString(base64Content);
+
+        return binaryData;
+    }
 }
