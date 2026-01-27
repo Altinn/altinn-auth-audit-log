@@ -1,10 +1,11 @@
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 
 namespace Altinn.Auth.AuditLog.Persistence
 {
@@ -63,7 +64,6 @@ namespace Altinn.Auth.AuditLog.Persistence
                 @decision,
                 @subjectpartyuuid
             )
-            RETURNING *;
             """;
 
             if (authorizationEvent == null) 
@@ -89,6 +89,8 @@ namespace Altinn.Auth.AuditLog.Persistence
             try
             {
                 Debug.Assert(authorizationEvent.Decision.HasValue);
+                var decisionValue = ((int)authorizationEvent.Decision.Value) + 1 /* db starts at value 1 */;
+                Assert(decisionValue is >= 1 and <= 4);
 
                 await using NpgsqlCommand pgcom = _dataSource.CreateCommand(INSERTAUTHZEVENT);
                 pgcom.Parameters.AddWithValue("sessionid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.SessionId) ? DBNull.Value : authorizationEvent.SessionId);
@@ -103,7 +105,7 @@ namespace Altinn.Auth.AuditLog.Persistence
                 pgcom.Parameters.AddWithValue("operation", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.Operation) ? DBNull.Value : authorizationEvent.Operation);
                 pgcom.Parameters.AddWithValue("ipaddress", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.IpAdress) ? DBNull.Value : authorizationEvent.IpAdress);
                 pgcom.Parameters.AddWithValue("contextrequestjson", NpgsqlTypes.NpgsqlDbType.Jsonb, authorizationEvent.ContextRequestJson);
-                pgcom.Parameters.AddWithValue("decision", NpgsqlTypes.NpgsqlDbType.Integer, ((int)authorizationEvent.Decision.Value) + 1 /* db starts at value 1 */);
+                pgcom.Parameters.AddWithValue("decision", NpgsqlTypes.NpgsqlDbType.Integer, decisionValue);
                 pgcom.Parameters.AddWithValue("subjectpartyuuid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.SubjectPartyUuid) ? DBNull.Value : authorizationEvent.SubjectPartyUuid);
 
                 await pgcom.ExecuteNonQueryAsync();
@@ -112,6 +114,16 @@ namespace Altinn.Auth.AuditLog.Persistence
             {
                 _logger.LogError(e, "AuditLog // AuditLogMetadataRepository // InsertAuthorizationEvent // Exception");
                 throw;
+            }
+        }
+
+        private static void Assert(
+            [DoesNotReturnIf(false)] bool condition,
+            [CallerArgumentExpression(nameof(condition))] string? message = null)
+        {
+            if (!condition)
+            {
+                throw new InvalidOperationException(message ?? "Assert condition failed");
             }
         }
     }
