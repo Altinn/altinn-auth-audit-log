@@ -27,7 +27,7 @@ The auditlog api maps the events to the database model and stores them in the da
 The events are stored in the postgres database.
 
 ## Technologies
-  - .NET 9.0
+  - .NET 10.0
   - Azure Storage Queue
   - Azure Function App V4
   - Azure Container App
