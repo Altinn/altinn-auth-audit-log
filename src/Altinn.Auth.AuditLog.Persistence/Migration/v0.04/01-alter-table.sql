@@ -1,5 +1,3 @@
-ALTER TABLE authentication.authenticationmethod
-
 -- Add new authentication methods
 INSERT INTO authentication.authenticationmethod (authenticationmethodid, name, description)
 VALUES (21, 'MinIDTOTP', 'MinIDTOTP')
