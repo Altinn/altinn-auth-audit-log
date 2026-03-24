@@ -66,5 +66,29 @@ namespace Altinn.Auth.AuditLog.Persistence
                 }
             }
         }
+
+        public async Task DeletePartitions(IReadOnlyList<Partition> partitions, CancellationToken cancellationToken)
+        {
+            await using (var batch = _dataSource.CreateBatch())
+            {
+                try
+                {
+                    foreach (var partition in partitions)
+                    {
+                        var cmd = batch.CreateBatchCommand();
+                        cmd.CommandText = /*strpsql*/$"""
+                            DROP TABLE IF EXISTS {partition.SchemaName}.{partition.Name} CASCADE;
+                            """;
+                        batch.BatchCommands.Add(cmd);
+                    }
+                    await batch.ExecuteNonQueryAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "AuditLog // PartitionManagerRepository // DeletePartition // Exception");
+                    throw;
+                }
+            }
+        }
     }
 }
