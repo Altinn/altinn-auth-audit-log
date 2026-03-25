@@ -67,7 +67,8 @@ namespace Altinn.Auth.AuditLog.Persistence
             }
         }
 
-        public async Task DeletePartitions(IReadOnlyList<Partition> partitions, CancellationToken cancellationToken)
+        /// <inheritdoc/>
+        public async Task DeletePartitions(IReadOnlyList<Partition> partitions, CancellationToken cancellationToken = default)
         {
             await using (var batch = _dataSource.CreateBatch())
             {

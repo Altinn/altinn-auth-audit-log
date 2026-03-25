@@ -1,6 +1,7 @@
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -21,8 +22,10 @@ public class PartitionCreationHostedServiceTests
     public void GetPartitionsForCurrentAndAdjacentMonths_ReturnsCorrectPartitions()
     {
         // Arrange
+        var logger = NullLogger<PartitionCreationHostedService>.Instance;
+        var repo = Mock.Of<IPartitionManagerRepository>();
         var timeProvider = new FakeTimeProvider(new DateTime(2023, 10, 15));
-        var service = new PartitionCreationHostedService(null, null, timeProvider, CreateDefaultOptions());
+        var service = new PartitionCreationHostedService(logger, repo, timeProvider, CreateDefaultOptions());
 
         // Act
         var partitions = service.GetPartitionsForCurrentAndAdjacentMonths();
@@ -41,7 +44,10 @@ public class PartitionCreationHostedServiceTests
     public void GetMonthStartAndEndDate_ReturnsCorrectDates(int year, int month, int day, int expectedStartYear, int expectedStartMonth, int expectedStartDay, int expectedEndYear, int expectedEndMonth, int expectedEndDay)
     {
         // Arrange
-        var service = new PartitionCreationHostedService(null, null, null, CreateDefaultOptions());
+        var logger = NullLogger<PartitionCreationHostedService>.Instance;
+        var repo = Mock.Of<IPartitionManagerRepository>();
+        var timeProvider = new FakeTimeProvider(new DateTime(2023, 12, 15));
+        var service = new PartitionCreationHostedService(logger, repo, timeProvider, CreateDefaultOptions());
         var date = new DateOnly(year, month, day);
 
         // Act
@@ -56,8 +62,10 @@ public class PartitionCreationHostedServiceTests
     public void GetPartitionsForCurrentAndAdjacentMonths_CrossYearBoundary_ReturnsCorrectPartitions()
     {
         // Arrange
+        var logger = NullLogger<PartitionCreationHostedService>.Instance;
+        var repo = Mock.Of<IPartitionManagerRepository>();
         var timeProvider = new FakeTimeProvider(new DateTime(2023, 12, 15));
-        var service = new PartitionCreationHostedService(null, null, timeProvider, CreateDefaultOptions());
+        var service = new PartitionCreationHostedService(logger, repo, timeProvider, CreateDefaultOptions());
 
         // Act
         var partitions = service.GetPartitionsForCurrentAndAdjacentMonths();
