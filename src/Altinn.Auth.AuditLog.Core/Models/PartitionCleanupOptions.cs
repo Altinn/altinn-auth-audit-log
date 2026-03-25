@@ -1,5 +1,8 @@
-public class PartitionCleanupOptions
+namespace Altinn.Auth.AuditLog.Core.Models
 {
-    public bool EnableOldPartitionDeletion { get; set; }
-    public int RetentionMonths { get; set; } = 1; // Default: delete partitions older than 1 month
+    public class PartitionCleanupOptions
+    {
+        public bool EnableOldPartitionDeletion { get; set; }
+        public int RetentionMonths { get; set; } = 1; // Default: delete partitions older than 1 month
+    }
 }
