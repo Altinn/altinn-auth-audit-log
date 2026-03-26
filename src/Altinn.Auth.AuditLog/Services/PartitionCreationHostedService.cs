@@ -1,6 +1,7 @@
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Auth.AuditLog.Core.Services.Interfaces;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using System.Diagnostics;
 
@@ -16,6 +17,7 @@ namespace Altinn.Auth.AuditLog.Services
         private ITimer? _timer;
         private CancellationTokenSource? _stoppingCts;
         private bool _disposed;
+        private readonly PartitionCleanupOptions _cleanupOptions;
 
         private Task _runningJob = Task.CompletedTask;
 
@@ -28,11 +30,13 @@ namespace Altinn.Auth.AuditLog.Services
         public PartitionCreationHostedService(
             ILogger<PartitionCreationHostedService> logger,
             IPartitionManagerRepository partitionManagerRepository,
-            TimeProvider timeProvider)
+            TimeProvider timeProvider,
+            IOptions<PartitionCleanupOptions> cleanupOptions)
         {
             _logger = logger;
             _partitionManagerRepository = partitionManagerRepository;
             _timeProvider = timeProvider;
+            _cleanupOptions = cleanupOptions.Value;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -44,7 +48,7 @@ namespace Altinn.Auth.AuditLog.Services
                 static (state) =>
                 {
                     var self = (PartitionCreationHostedService)state!;
-                    self.CreateMonthlyPartitionFromTimer();
+                    self.ManagePartitionsFromTimer();
                 },
                 dueTime: TimeSpan.FromDays(1),
                 period: TimeSpan.FromDays(1),
@@ -52,7 +56,7 @@ namespace Altinn.Auth.AuditLog.Services
             );
 
             // if it does not run at once
-            return CreateMonthlyPartition(cancellationToken);
+            return ManagePartitions(cancellationToken);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
@@ -85,7 +89,7 @@ namespace Altinn.Auth.AuditLog.Services
             _stoppingCts?.Dispose();
         }
 
-        private void CreateMonthlyPartitionFromTimer()
+        private void ManagePartitionsFromTimer()
         {
             Task newJob = null!;
             newJob = Task.Run(async () =>
@@ -94,7 +98,7 @@ namespace Altinn.Auth.AuditLog.Services
 
                 try
                 {
-                    await CreateMonthlyPartition(token);
+                    await ManagePartitions(token);
                 }
                 catch (Exception ex)
                 {
@@ -122,11 +126,55 @@ namespace Altinn.Auth.AuditLog.Services
             }
         }
 
-        private async Task CreateMonthlyPartition(CancellationToken cancellationToken)
+        private async Task ManagePartitions(CancellationToken cancellationToken)
         {
             var partitions = GetPartitionsForCurrentAndAdjacentMonths();
 
             await _partitionManagerRepository.CreatePartitions(partitions, cancellationToken);
+
+            if (_cleanupOptions.EnableOldPartitionDeletion)
+            {
+                await DeleteOldPartitions(cancellationToken);
+            }
+        }
+
+        private async Task DeleteOldPartitions(CancellationToken cancellationToken)
+        {
+            var now = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+            var cutoffDate = new DateOnly(now.Year, now.Month, 1).AddMonths(-_cleanupOptions.RetentionMonths);
+
+            var partitionsToDelete = GetPartitionsToDelete(cutoffDate).ToList();
+            if (partitionsToDelete.Any())
+            {
+                await _partitionManagerRepository.DeletePartitions(partitionsToDelete, cancellationToken);
+            }
+        }
+
+        internal IEnumerable<Partition> GetPartitionsToDelete(DateOnly cutoffDate)
+        {
+            string[] schemas = { "authentication", "authz" };
+            var now = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+
+            // Let's assume you want to check up to 24 months back
+            for (int i = 0; i < 24; i++)
+            {
+                var date = now.AddMonths(-i);
+                var (start, end) = GetMonthStartAndEndDate(date);
+                if (end <= cutoffDate)
+                {
+                    var partitionName = $"eventlogv1_y{start.Year}m{start.Month:D2}";
+                    foreach (var schema in schemas)
+                    {
+                        yield return new Partition
+                        {
+                            SchemaName = schema,
+                            Name = partitionName,
+                            StartDate = start,
+                            EndDate = end
+                        };
+                    }
+                }
+            }
         }
 
         internal IReadOnlyList<Partition> GetPartitionsForCurrentAndAdjacentMonths()
