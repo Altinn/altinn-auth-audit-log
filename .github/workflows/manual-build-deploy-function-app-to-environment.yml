@@ -85,7 +85,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy FunctionApp
-        uses: Azure/functions-action@02a16c5f3a5707fa97fca56c202cc2ef6cc7dccb # v1
+        uses: Azure/functions-action@bc63708cc6539760eea18d8a7de4ce8ef5fdf593 # v1
         with:
           app-name: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
           package: ./artifacts/function-app
