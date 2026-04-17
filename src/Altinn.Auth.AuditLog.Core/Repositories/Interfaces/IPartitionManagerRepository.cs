@@ -19,5 +19,12 @@ namespace Altinn.Auth.AuditLog.Core.Repositories.Interfaces
         /// <param name="cancellationToken">A <see cref="CancellationToken"/>.</param>
         /// <returns>true if the partition is created</returns>
         Task CreatePartitions(IReadOnlyList<Partition> partitions, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Deletes the specified partitions from the authentication event, authorization event tables
+        /// </summary>
+        /// <param name="partitions">the list of partitions to be deleted</param>
+        /// <param name="cancellationToken">A <see cref="CancellationToken"/>.</param>
+        Task DeletePartitions(IReadOnlyList<Partition> partitions, CancellationToken cancellationToken = default);
     }
 }

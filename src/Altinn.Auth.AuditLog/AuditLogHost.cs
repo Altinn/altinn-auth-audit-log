@@ -30,6 +30,7 @@ namespace Altinn.Auth.AuditLog
             services.AddMemoryCache();
 
             services.Configure<KeyVaultSettings>(config.GetSection("kvSetting"));
+            services.Configure<PartitionCleanupOptions>(config.GetSection("PartitionCleanup"));
             builder.AddAuditLogPersistence();
             builder.Services.AddSingleton<PartitionCreationHostedService>();
             builder.Services.AddHostedService(sp => sp.GetRequiredService<PartitionCreationHostedService>());
