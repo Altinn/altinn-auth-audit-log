@@ -1,5 +1,6 @@
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
+using Altinn.Authorization.ServiceDefaults.Npgsql;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using System.Diagnostics;
@@ -22,7 +23,7 @@ namespace Altinn.Auth.AuditLog.Persistence
         /// <param name="logger">handler for logger service</param>
         public AuthorizationEventRepository(
             NpgsqlDataSource dataSource,
-            ILogger<AuthorizationEventRepository> logger) 
+            ILogger<AuthorizationEventRepository> logger)
         {
             _dataSource = dataSource;
             _logger = logger;
@@ -66,7 +67,7 @@ namespace Altinn.Auth.AuditLog.Persistence
             )
             """;
 
-            if (authorizationEvent == null) 
+            if (authorizationEvent == null)
             {
                 throw new ArgumentNullException(nameof(authorizationEvent));
             }
@@ -92,7 +93,8 @@ namespace Altinn.Auth.AuditLog.Persistence
                 var decisionValue = ((int)authorizationEvent.Decision.Value) + 1 /* db starts at value 1 */;
                 Assert(decisionValue is >= 1 and <= 4);
 
-                await using NpgsqlCommand pgcom = _dataSource.CreateCommand(INSERTAUTHZEVENT);
+                await using NpgsqlConnection pgcon = await _dataSource.OpenConnectionAsync();
+                await using NpgsqlCommand pgcom = pgcon.CreateCommand(INSERTAUTHZEVENT);
                 pgcom.Parameters.AddWithValue("sessionid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.SessionId) ? DBNull.Value : authorizationEvent.SessionId);
                 pgcom.Parameters.AddWithValue("created", NpgsqlTypes.NpgsqlDbType.TimestampTz, authorizationEvent.Created.Value.ToOffset(TimeSpan.Zero));
                 pgcom.Parameters.AddWithValue("subjectuserid", NpgsqlTypes.NpgsqlDbType.Integer, (authorizationEvent.SubjectUserId == null) ? DBNull.Value : authorizationEvent.SubjectUserId);
@@ -108,6 +110,7 @@ namespace Altinn.Auth.AuditLog.Persistence
                 pgcom.Parameters.AddWithValue("decision", NpgsqlTypes.NpgsqlDbType.Integer, decisionValue);
                 pgcom.Parameters.AddWithValue("subjectpartyuuid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authorizationEvent.SubjectPartyUuid) ? DBNull.Value : authorizationEvent.SubjectPartyUuid);
 
+                await pgcom.PrepareAsync();
                 await pgcom.ExecuteNonQueryAsync();
             }
             catch (Exception e)

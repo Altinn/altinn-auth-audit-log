@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
+using Altinn.Authorization.ServiceDefaults.Npgsql;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -18,10 +19,10 @@ namespace Altinn.Auth.AuditLog.Persistence
         /// <param name="dataSource">The postgreSQL datasource for AuditLogDB</param>
         /// <param name="logger">handler for logger service</param>
         public AuthenticationEventRepository(NpgsqlDataSource dataSource,
-            ILogger<AuthenticationEventRepository> logger) 
+            ILogger<AuthenticationEventRepository> logger)
         {
             _dataSource = dataSource;
-            _logger = logger;       
+            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -62,7 +63,7 @@ namespace Altinn.Auth.AuditLog.Persistence
             RETURNING *;
             """;
 
-            if (authenticationEvent == null) 
+            if (authenticationEvent == null)
             {
                 throw new ArgumentNullException(nameof(authenticationEvent));
             }
@@ -74,8 +75,9 @@ namespace Altinn.Auth.AuditLog.Persistence
 
             try
             {
-                await using NpgsqlCommand pgcom = _dataSource.CreateCommand(INSERTAUTHNEVENT);
-                
+                await using NpgsqlConnection pgcon = await _dataSource.OpenConnectionAsync();
+                await using NpgsqlCommand pgcom = pgcon.CreateCommand(INSERTAUTHNEVENT);
+
                 pgcom.Parameters.AddWithValue("sessionid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.SessionId) ? DBNull.Value : authenticationEvent.SessionId);
                 pgcom.Parameters.AddWithValue("externalsessionid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.ExternalSessionId) ? DBNull.Value : authenticationEvent.ExternalSessionId);
                 pgcom.Parameters.AddWithValue("subscriptionkey", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.SubscriptionKey) ? DBNull.Value : authenticationEvent.SubscriptionKey);
@@ -84,13 +86,13 @@ namespace Altinn.Auth.AuditLog.Persistence
                 pgcom.Parameters.AddWithValue("userid", NpgsqlTypes.NpgsqlDbType.Integer, (authenticationEvent.UserId == null) ? DBNull.Value : authenticationEvent.UserId);
                 pgcom.Parameters.AddWithValue("supplierid", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.SupplierId) ? DBNull.Value : authenticationEvent.SupplierId);
                 pgcom.Parameters.AddWithValue("orgnumber", NpgsqlTypes.NpgsqlDbType.Integer, (authenticationEvent.OrgNumber == null) ? DBNull.Value : authenticationEvent.OrgNumber);
-                pgcom.Parameters.AddWithValue("eventtypeid", NpgsqlTypes.NpgsqlDbType.Integer, Convert.ToInt32(authenticationEvent.EventType));                
+                pgcom.Parameters.AddWithValue("eventtypeid", NpgsqlTypes.NpgsqlDbType.Integer, Convert.ToInt32(authenticationEvent.EventType));
                 pgcom.Parameters.AddWithValue("authenticationmethodid", NpgsqlTypes.NpgsqlDbType.Integer, (authenticationEvent.AuthenticationMethod == null) ? DBNull.Value : Convert.ToInt32(authenticationEvent.AuthenticationMethod));
                 pgcom.Parameters.AddWithValue("authenticationlevelid", NpgsqlTypes.NpgsqlDbType.Integer, (authenticationEvent.AuthenticationLevel == null) ? DBNull.Value : Convert.ToInt32(authenticationEvent.AuthenticationLevel));
-                pgcom.Parameters.AddWithValue("ipaddress", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.IpAddress) ? DBNull.Value : authenticationEvent.IpAddress);                
+                pgcom.Parameters.AddWithValue("ipaddress", NpgsqlTypes.NpgsqlDbType.Text, string.IsNullOrEmpty(authenticationEvent.IpAddress) ? DBNull.Value : authenticationEvent.IpAddress);
                 pgcom.Parameters.AddWithValue("isauthenticated", NpgsqlTypes.NpgsqlDbType.Boolean, authenticationEvent.IsAuthenticated);
 
-
+                await pgcom.PrepareAsync();
                 await pgcom.ExecuteNonQueryAsync();
             }
             catch (Exception e)
