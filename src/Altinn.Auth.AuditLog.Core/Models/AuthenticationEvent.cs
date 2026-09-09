@@ -33,7 +33,7 @@ namespace Altinn.Auth.AuditLog.Core.Models
         public DateTimeOffset? Created { get; set; }
 
         /// <summary>
-        /// Id of the user that triggered that authentication event 
+        /// Id of the user that triggered that authentication event
         /// </summary>
         public int? UserId { get; set; }
 
