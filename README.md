@@ -124,3 +124,46 @@ The application has a release every wednesday. [create-release-draft](https://gi
 
 ### Manually deploy a specific commit to specific environment
 In some scenarios, there will be a necessity to deploy a specific commit/branch to a specific environment. [manual-build-deploy-to-environment](https://github.com/Altinn/altinn-auth-audit-log/blob/main/.github/workflows/manual-build-deploy-to-environment.yml) action can be used to build/ deploy a specific commitid.
+
+## Spec-driven development
+
+This repository uses [GitHub Spec Kit](https://github.com/github/spec-kit) v1.0.6
+with Codex skills in `.agents/skills/` and PowerShell scripts in `.specify/`.
+Project principles are recorded in the [constitution](.specify/memory/constitution.md).
+
+For issue #332, start with the [feature specification](specs/001-improve-audit-log/spec.md)
+and [design discussion](specs/001-improve-audit-log/design-discussion.md). The discussion
+captures proposed indexing, partitioning, repetition handling, caching, and evidence protection;
+a formal implementation plan has not yet been produced.
+
+Start Codex in this repository and use these skills in order:
+
+1. `$speckit-constitution` to establish project principles.
+2. `$speckit-specify` followed by a description of the next feature.
+3. `$speckit-plan` to develop its implementation plan.
+4. `$speckit-tasks` to break the plan into tasks.
+5. `$speckit-implement` to implement the tasks.
+
+The scripts require PowerShell 7 (`pwsh`). To install the matching CLI with
+[uv](https://docs.astral.sh/uv/):
+
+```powershell
+uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v1.0.6
+specify version
+```
+
+If the uv tool executable directory is not on PATH, add it to the current
+PowerShell session (the Windows default is shown):
+
+```powershell
+$env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
+specify version
+```
+
+The project was initialized with:
+
+```powershell
+specify init --here --force --non-interactive --integration codex --script ps --ignore-agent-tools
+```
+
+The Git extension is optional and is not installed; manage branches with Git as usual.
