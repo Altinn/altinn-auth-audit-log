@@ -6,6 +6,7 @@ namespace Altinn.Auth.AuditLog.Queue;
 
 /// <summary>
 /// Event-type specific part of a queue consumer: how to decode a message and how to persist a batch.
+/// Resolved from a service scope created per batch.
 /// </summary>
 /// <typeparam name="TEvent">The event type.</typeparam>
 public interface IQueueEventProcessor<TEvent>
@@ -19,7 +20,7 @@ public interface IQueueEventProcessor<TEvent>
     /// Decodes and validates a message body.
     /// </summary>
     /// <exception cref="MessageDecodeException">If the message is permanently undecodable.</exception>
-    TEvent Decode(ReadOnlyMemory<byte> body);
+    TEvent Decode(ReadOnlySpan<byte> body);
 
     /// <summary>
     /// Persists a batch atomically: when this returns, every event is committed; when it throws, none are.
@@ -43,8 +44,8 @@ internal sealed class AuthorizationQueueEventProcessor : IQueueEventProcessor<Au
     public string Kind => "authorization";
 
     /// <inheritdoc/>
-    public AuthorizationEvent Decode(ReadOnlyMemory<byte> body)
-        => AuthorizationEventMessageDecoder.Decode(body);
+    public AuthorizationEvent Decode(ReadOnlySpan<byte> body)
+        => AuthorizationEventMessageDecoder.Instance.Decode(body);
 
     /// <inheritdoc/>
     public Task PersistAsync(IReadOnlyList<AuthorizationEvent> events, CancellationToken cancellationToken)
@@ -67,8 +68,8 @@ internal sealed class AuthenticationQueueEventProcessor : IQueueEventProcessor<A
     public string Kind => "authentication";
 
     /// <inheritdoc/>
-    public AuthenticationEvent Decode(ReadOnlyMemory<byte> body)
-        => AuthenticationEventMessageDecoder.Decode(body);
+    public AuthenticationEvent Decode(ReadOnlySpan<byte> body)
+        => AuthenticationEventMessageDecoder.Instance.Decode(body);
 
     /// <inheritdoc/>
     public Task PersistAsync(IReadOnlyList<AuthenticationEvent> events, CancellationToken cancellationToken)

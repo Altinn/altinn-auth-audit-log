@@ -446,9 +446,9 @@ public class QueueBatchConsumerTests
 
         public string Kind => "test";
 
-        public string Decode(ReadOnlyMemory<byte> body)
+        public string Decode(ReadOnlySpan<byte> body)
         {
-            var text = Encoding.UTF8.GetString(body.Span);
+            var text = Encoding.UTF8.GetString(body);
             if (text.StartsWith("bad", StringComparison.Ordinal))
             {
                 throw new MessageDecodeException(MessageDecodeException.Reasons.InvalidJson, "bad message");

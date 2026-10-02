@@ -15,7 +15,7 @@ public class AuthorizationEventMessageDecoderTests
     [Fact]
     public void Decode_LegacyBase64_Decodes()
     {
-        var actual = AuthorizationEventMessageDecoder.Decode(QueueTestData.GetAuthorizationEvent_LegacyFormat());
+        var actual = AuthorizationEventMessageDecoder.Instance.Decode(QueueTestData.GetAuthorizationEvent_LegacyFormat());
 
         AssertExpectedEvent(actual);
     }
@@ -23,7 +23,7 @@ public class AuthorizationEventMessageDecoderTests
     [Fact]
     public void Decode_LegacyRawJson_Decodes()
     {
-        var actual = AuthorizationEventMessageDecoder.Decode(QueueTestData.GetAuthorizationEvent_LegacyFormat_NonBase64());
+        var actual = AuthorizationEventMessageDecoder.Instance.Decode(QueueTestData.GetAuthorizationEvent_LegacyFormat_NonBase64());
 
         AssertExpectedEvent(actual);
     }
@@ -31,7 +31,7 @@ public class AuthorizationEventMessageDecoderTests
     [Fact]
     public void Decode_V1Brotli_Decodes()
     {
-        var actual = AuthorizationEventMessageDecoder.Decode(QueueTestData.GetAuthorizationEvent_V1Format());
+        var actual = AuthorizationEventMessageDecoder.Instance.Decode(QueueTestData.GetAuthorizationEvent_V1Format());
 
         AssertExpectedEvent(actual);
     }
@@ -39,7 +39,7 @@ public class AuthorizationEventMessageDecoderTests
     [Fact]
     public void Decode_V1BrotliBase64Wrapped_Decodes()
     {
-        var actual = AuthorizationEventMessageDecoder.Decode(QueueTestData.GetAuthorizationEvent_V1Format_Base64Wrapped());
+        var actual = AuthorizationEventMessageDecoder.Instance.Decode(QueueTestData.GetAuthorizationEvent_V1Format_Base64Wrapped());
 
         AssertExpectedEvent(actual);
     }
@@ -49,7 +49,7 @@ public class AuthorizationEventMessageDecoderTests
     {
         var json = Encoding.UTF8.GetBytes("""{"created":"2018-05-15T02:05:00Z","operation":"read","decision":"Deny","contextRequestJson":{}}""");
 
-        var actual = AuthorizationEventMessageDecoder.Decode(json);
+        var actual = AuthorizationEventMessageDecoder.Instance.Decode(json);
 
         Assert.Equal(XacmlContextDecision.Deny, actual.Decision);
     }
@@ -57,7 +57,7 @@ public class AuthorizationEventMessageDecoderTests
     [Fact]
     public void Decode_TooSmall_ThrowsTooSmall()
     {
-        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Decode(Array.Empty<byte>()));
+        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Instance.Decode(Array.Empty<byte>()));
 
         Assert.Equal(MessageDecodeException.Reasons.TooSmall, ex.Reason);
     }
@@ -65,7 +65,7 @@ public class AuthorizationEventMessageDecoderTests
     [Fact]
     public void Decode_UnsupportedVersion_ThrowsUnsupportedVersion()
     {
-        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Decode("99abc"u8.ToArray()));
+        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Instance.Decode("99abc"u8.ToArray()));
 
         Assert.Equal(MessageDecodeException.Reasons.UnsupportedVersion, ex.Reason);
     }
@@ -73,7 +73,7 @@ public class AuthorizationEventMessageDecoderTests
     [Fact]
     public void Decode_Garbage_ThrowsInvalidBase64()
     {
-        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Decode("!!!not base64 at all!!!"u8.ToArray()));
+        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Instance.Decode("!!!not base64 at all!!!"u8.ToArray()));
 
         Assert.Equal(MessageDecodeException.Reasons.InvalidBase64, ex.Reason);
     }
@@ -82,7 +82,7 @@ public class AuthorizationEventMessageDecoderTests
     public void Decode_CorruptBrotli_IsPermanentFailure()
     {
         // Brotli may either reject the stream or decode it to junk; both are permanent (poison), the reason differs.
-        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Decode("01\xff\xfe\x00\x01garbage"u8.ToArray()));
+        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Instance.Decode("01\xff\xfe\x00\x01garbage"u8.ToArray()));
 
         Assert.Contains(ex.Reason, new[] { MessageDecodeException.Reasons.InvalidCompression, MessageDecodeException.Reasons.InvalidJson });
     }
@@ -90,7 +90,7 @@ public class AuthorizationEventMessageDecoderTests
     [Fact]
     public void Decode_InvalidJson_ThrowsInvalidJson()
     {
-        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Decode("{not json"u8.ToArray()));
+        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Instance.Decode("{not json"u8.ToArray()));
 
         Assert.Equal(MessageDecodeException.Reasons.InvalidJson, ex.Reason);
     }
@@ -102,7 +102,7 @@ public class AuthorizationEventMessageDecoderTests
     [InlineData("""{"created":"2018-05-15T02:05:00Z","operation":"read","decision":0,"contextRequestJson":[]}""")] // context not an object
     public void Decode_FailsValidation_ThrowsValidationFailed(string json)
     {
-        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Decode(Encoding.UTF8.GetBytes(json)));
+        var ex = Assert.Throws<MessageDecodeException>(() => AuthorizationEventMessageDecoder.Instance.Decode(Encoding.UTF8.GetBytes(json)));
 
         Assert.Equal(MessageDecodeException.Reasons.ValidationFailed, ex.Reason);
     }
@@ -129,7 +129,7 @@ public class AuthenticationEventMessageDecoderTests
     [Fact]
     public void Decode_Json_Decodes()
     {
-        var actual = AuthenticationEventMessageDecoder.Decode(QueueTestData.GetAuthenticationEvent_JsonData());
+        var actual = AuthenticationEventMessageDecoder.Instance.Decode(QueueTestData.GetAuthenticationEvent_JsonData());
 
         AssertExpectedEvent(actual);
     }
@@ -137,7 +137,7 @@ public class AuthenticationEventMessageDecoderTests
     [Fact]
     public void Decode_Base64Wrapped_Decodes()
     {
-        var actual = AuthenticationEventMessageDecoder.Decode(QueueTestData.GetAuthenticationEvent_Base64Wrapped());
+        var actual = AuthenticationEventMessageDecoder.Instance.Decode(QueueTestData.GetAuthenticationEvent_Base64Wrapped());
 
         AssertExpectedEvent(actual);
     }
@@ -147,7 +147,7 @@ public class AuthenticationEventMessageDecoderTests
     {
         var json = Encoding.UTF8.GetBytes("""{"created":"2023-09-07T06:24:43Z","eventType":2,"authenticationMethod":16}""");
 
-        var actual = AuthenticationEventMessageDecoder.Decode(json);
+        var actual = AuthenticationEventMessageDecoder.Instance.Decode(json);
 
         Assert.Equal(AuthenticationEventType.Refresh, actual.EventType);
         Assert.Equal(AuthenticationMethod.MaskinPorten, actual.AuthenticationMethod);
@@ -156,7 +156,7 @@ public class AuthenticationEventMessageDecoderTests
     [Fact]
     public void Decode_TooSmall_ThrowsTooSmall()
     {
-        var ex = Assert.Throws<MessageDecodeException>(() => AuthenticationEventMessageDecoder.Decode("{"u8.ToArray()));
+        var ex = Assert.Throws<MessageDecodeException>(() => AuthenticationEventMessageDecoder.Instance.Decode("{"u8.ToArray()));
 
         Assert.Equal(MessageDecodeException.Reasons.TooSmall, ex.Reason);
     }
@@ -164,7 +164,7 @@ public class AuthenticationEventMessageDecoderTests
     [Fact]
     public void Decode_Garbage_ThrowsInvalidBase64()
     {
-        var ex = Assert.Throws<MessageDecodeException>(() => AuthenticationEventMessageDecoder.Decode("!!!"u8.ToArray()));
+        var ex = Assert.Throws<MessageDecodeException>(() => AuthenticationEventMessageDecoder.Instance.Decode("!!!"u8.ToArray()));
 
         Assert.Equal(MessageDecodeException.Reasons.InvalidBase64, ex.Reason);
     }
@@ -172,7 +172,7 @@ public class AuthenticationEventMessageDecoderTests
     [Fact]
     public void Decode_InvalidJson_ThrowsInvalidJson()
     {
-        var ex = Assert.Throws<MessageDecodeException>(() => AuthenticationEventMessageDecoder.Decode("{\"created\":"u8.ToArray()));
+        var ex = Assert.Throws<MessageDecodeException>(() => AuthenticationEventMessageDecoder.Instance.Decode("{\"created\":"u8.ToArray()));
 
         Assert.Equal(MessageDecodeException.Reasons.InvalidJson, ex.Reason);
     }
@@ -180,7 +180,7 @@ public class AuthenticationEventMessageDecoderTests
     [Fact]
     public void Decode_MissingCreated_ThrowsValidationFailed()
     {
-        var ex = Assert.Throws<MessageDecodeException>(() => AuthenticationEventMessageDecoder.Decode("""{"userId":1}"""u8.ToArray()));
+        var ex = Assert.Throws<MessageDecodeException>(() => AuthenticationEventMessageDecoder.Instance.Decode("""{"userId":1}"""u8.ToArray()));
 
         Assert.Equal(MessageDecodeException.Reasons.ValidationFailed, ex.Reason);
     }

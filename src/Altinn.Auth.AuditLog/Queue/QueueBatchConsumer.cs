@@ -345,7 +345,7 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
 
             try
             {
-                var @event = processor.Decode(message.Body.ToMemory());
+                var @event = processor.Decode(message.Body.ToMemory().Span);
                 accepted.Add(message);
                 events.Add(@event);
             }
