@@ -18,5 +18,12 @@ namespace Altinn.Auth.AuditLog.Core.Services.Interfaces
         /// <param name="authenticationEvent">the authentication event</param>
         /// <returns></returns>
         public Task CreateAuthenticationEvent(AuthenticationEvent authenticationEvent);
+
+        /// <summary>
+        /// Logs a batch of authentication events atomically (all or nothing).
+        /// </summary>
+        /// <param name="authenticationEvents">the authentication events</param>
+        /// <param name="cancellationToken">A <see cref="CancellationToken"/>.</param>
+        public Task CreateAuthenticationEvents(IReadOnlyList<AuthenticationEvent> authenticationEvents, CancellationToken cancellationToken = default);
     }
 }

@@ -3,6 +3,7 @@ using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Authorization.ServiceDefaults.Npgsql;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using NpgsqlTypes;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -122,6 +123,159 @@ namespace Altinn.Auth.AuditLog.Persistence
                 throw;
             }
         }
+
+        /// <inheritdoc/>
+        public async Task InsertAuthorizationEvents(IReadOnlyList<AuthorizationEvent> authorizationEvents, CancellationToken cancellationToken = default)
+        {
+            // One statement == one transaction: either every row is inserted, or none are.
+            // unnest over typed array parameters keeps this a single prepared statement regardless of batch size,
+            // and (unlike COPY) leaves room for ON CONFLICT when dedup lands.
+            const string INSERTAUTHZEVENTS = /*strpsql*/
+            """
+            INSERT INTO authz.eventlogv1(
+                sessionid,
+                created,
+                subjectuserid,
+                subjectorgcode,
+                subjectorgnumber,
+                subjectparty,
+                resourcepartyid,
+                resource,
+                instanceid,
+                operation,
+                ipaddress,
+                contextrequestjson,
+                decision,
+                subject_party_uuid,
+                trace_id
+            )
+            SELECT * FROM unnest(
+                @sessionid,
+                @created,
+                @subjectuserid,
+                @subjectorgcode,
+                @subjectorgnumber,
+                @subjectparty,
+                @resourcepartyid,
+                @resource,
+                @instanceid,
+                @operation,
+                @ipaddress,
+                @contextrequestjson,
+                @decision,
+                @subjectpartyuuid,
+                @trace_id
+            )
+            """;
+
+            ArgumentNullException.ThrowIfNull(authorizationEvents);
+            if (authorizationEvents.Count == 0)
+            {
+                return;
+            }
+
+            var count = authorizationEvents.Count;
+            var sessionId = new string?[count];
+            var created = new DateTime[count];
+            var subjectUserId = new int?[count];
+            var subjectOrgCode = new string?[count];
+            var subjectOrgNumber = new int?[count];
+            var subjectParty = new int?[count];
+            var resourcePartyId = new int?[count];
+            var resource = new string?[count];
+            var instanceId = new string?[count];
+            var operation = new string?[count];
+            var ipAddress = new string?[count];
+            var contextRequestJson = new string[count];
+            var decision = new int[count];
+            var subjectPartyUuid = new string?[count];
+            var traceId = new string?[count];
+
+            for (var i = 0; i < count; i++)
+            {
+                var authorizationEvent = authorizationEvents[i];
+                if (authorizationEvent is null)
+                {
+                    throw new ArgumentNullException(nameof(authorizationEvents), $"Event at index {i} is null");
+                }
+
+                if (!authorizationEvent.Created.HasValue)
+                {
+                    throw new ArgumentNullException(nameof(authorizationEvents), $"Event at index {i}: Created must not be null");
+                }
+
+                if (string.IsNullOrEmpty(authorizationEvent.Operation))
+                {
+                    throw new ArgumentNullException(nameof(authorizationEvents), $"Event at index {i}: Operation must not be null or empty");
+                }
+
+                if (authorizationEvent.ContextRequestJson.ValueKind != JsonValueKind.Object)
+                {
+                    throw new ArgumentNullException(nameof(authorizationEvents), $"Event at index {i}: Context request must be an object");
+                }
+
+                if (!authorizationEvent.Decision.HasValue)
+                {
+                    throw new ArgumentNullException(nameof(authorizationEvents), $"Event at index {i}: Decision must not be null");
+                }
+
+                var decisionValue = ((int)authorizationEvent.Decision.Value) + 1 /* db starts at value 1 */;
+                Assert(decisionValue is >= 1 and <= 4);
+
+                sessionId[i] = NullIfEmpty(authorizationEvent.SessionId);
+                created[i] = authorizationEvent.Created.Value.UtcDateTime;
+                subjectUserId[i] = authorizationEvent.SubjectUserId;
+                subjectOrgCode[i] = NullIfEmpty(authorizationEvent.SubjectOrgCode);
+                subjectOrgNumber[i] = authorizationEvent.SubjectOrgNumber;
+                subjectParty[i] = authorizationEvent.SubjectParty;
+                resourcePartyId[i] = authorizationEvent.ResourcePartyId;
+                resource[i] = NullIfEmpty(authorizationEvent.Resource);
+                instanceId[i] = NullIfEmpty(authorizationEvent.InstanceId);
+                operation[i] = authorizationEvent.Operation;
+                ipAddress[i] = NullIfEmpty(authorizationEvent.IpAdress);
+                contextRequestJson[i] = authorizationEvent.ContextRequestJson.GetRawText();
+                decision[i] = decisionValue;
+                subjectPartyUuid[i] = NullIfEmpty(authorizationEvent.SubjectPartyUuid);
+                traceId[i] = NullIfEmpty(authorizationEvent.TraceId);
+            }
+
+            try
+            {
+                await using NpgsqlConnection pgcon = await _dataSource.OpenConnectionAsync(cancellationToken);
+                await using NpgsqlCommand pgcom = pgcon.CreateCommand(INSERTAUTHZEVENTS);
+
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("sessionid", sessionId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<DateTime[]>("created", created) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.TimestampTz });
+                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("subjectuserid", subjectUserId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("subjectorgcode", subjectOrgCode) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("subjectorgnumber", subjectOrgNumber) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
+                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("subjectparty", subjectParty) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
+                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("resourcepartyid", resourcePartyId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("resource", resource) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("instanceid", instanceId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("operation", operation) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("ipaddress", ipAddress) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<string[]>("contextrequestjson", contextRequestJson) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Jsonb });
+                pgcom.Parameters.Add(new NpgsqlParameter<int[]>("decision", decision) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("subjectpartyuuid", subjectPartyUuid) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("trace_id", traceId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+
+                await pgcom.PrepareAsync(cancellationToken);
+                var inserted = await pgcom.ExecuteNonQueryAsync(cancellationToken);
+                if (inserted != count)
+                {
+                    throw new InvalidOperationException($"Expected to insert {count} authorization events, but {inserted} rows were affected");
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "AuditLog // AuthorizationEventRepository // InsertAuthorizationEvents // Exception (batch size {BatchSize})", count);
+                throw;
+            }
+        }
+
+        private static string? NullIfEmpty(string? value)
+            => string.IsNullOrEmpty(value) ? null : value;
 
         private static void Assert(
             [DoesNotReturnIf(false)] bool condition,

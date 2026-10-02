@@ -4,6 +4,7 @@ using Altinn.Auth.AuditLog.Core.Services.Interfaces;
 using Altinn.Auth.AuditLog.Filters;
 using Altinn.Auth.AuditLog.Health;
 using Altinn.Auth.AuditLog.Persistence.Configuration;
+using Altinn.Auth.AuditLog.Queue;
 using Altinn.Auth.AuditLog.Services;
 using Altinn.Authorization.ServiceDefaults;
 using Azure.Identity;
@@ -35,8 +36,11 @@ namespace Altinn.Auth.AuditLog
             builder.Services.AddSingleton<PartitionCreationHostedService>();
             builder.Services.AddHostedService(sp => sp.GetRequiredService<PartitionCreationHostedService>());
             services.AddSingleton<IAuthenticationEventService, AuthenticationEventService>();
-            services.AddSingleton<IAuthorizationEventService, AuthorizationEventService>();           
+            services.AddSingleton<IAuthorizationEventService, AuthorizationEventService>();
             services.Configure<PostgreSQLSettings>(config.GetSection("PostgreSQLSettings"));
+
+            // In-process Storage Queue consumers (replaces the Azure Functions queue trigger, see #335).
+            builder.AddQueueConsumers();
 
             builder.Services
                 .AddControllers(options => options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true)

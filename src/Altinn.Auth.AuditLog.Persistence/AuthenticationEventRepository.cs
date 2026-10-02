@@ -4,6 +4,7 @@ using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
 using Altinn.Authorization.ServiceDefaults.Npgsql;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Altinn.Auth.AuditLog.Persistence
 {
@@ -101,5 +102,128 @@ namespace Altinn.Auth.AuditLog.Persistence
                 throw;
             }
         }
+
+        /// <inheritdoc/>
+        public async Task InsertAuthenticationEvents(IReadOnlyList<AuthenticationEvent> authenticationEvents, CancellationToken cancellationToken = default)
+        {
+            // One statement == one transaction: either every row is inserted, or none are.
+            const string INSERTAUTHNEVENTS = /*strpsql*/
+            """
+            INSERT INTO authentication.eventlogv1 (
+                sessionid,
+                externalsessionid,
+                subscriptionkey,
+                externaltokenissuer,
+                created,
+                userid,
+                supplierid,
+                orgnumber,
+                eventtypeid,
+                authenticationmethodid,
+                authenticationlevelid,
+                ipaddress,
+                isauthenticated
+            )
+            SELECT * FROM unnest(
+                @sessionid,
+                @externalsessionid,
+                @subscriptionkey,
+                @externaltokenissuer,
+                @created,
+                @userid,
+                @supplierid,
+                @orgnumber,
+                @eventtypeid,
+                @authenticationmethodid,
+                @authenticationlevelid,
+                @ipaddress,
+                @isauthenticated
+            )
+            """;
+
+            ArgumentNullException.ThrowIfNull(authenticationEvents);
+            if (authenticationEvents.Count == 0)
+            {
+                return;
+            }
+
+            var count = authenticationEvents.Count;
+            var sessionId = new string?[count];
+            var externalSessionId = new string?[count];
+            var subscriptionKey = new string?[count];
+            var externalTokenIssuer = new string?[count];
+            var created = new DateTime[count];
+            var userId = new int?[count];
+            var supplierId = new string?[count];
+            var orgNumber = new int?[count];
+            var eventTypeId = new int[count];
+            var authenticationMethodId = new int?[count];
+            var authenticationLevelId = new int?[count];
+            var ipAddress = new string?[count];
+            var isAuthenticated = new bool[count];
+
+            for (var i = 0; i < count; i++)
+            {
+                var authenticationEvent = authenticationEvents[i];
+                if (authenticationEvent is null)
+                {
+                    throw new ArgumentNullException(nameof(authenticationEvents), $"Event at index {i} is null");
+                }
+
+                if (!authenticationEvent.Created.HasValue)
+                {
+                    throw new ArgumentNullException(nameof(authenticationEvents), $"Event at index {i}: Created must not be null");
+                }
+
+                sessionId[i] = NullIfEmpty(authenticationEvent.SessionId);
+                externalSessionId[i] = NullIfEmpty(authenticationEvent.ExternalSessionId);
+                subscriptionKey[i] = NullIfEmpty(authenticationEvent.SubscriptionKey);
+                externalTokenIssuer[i] = NullIfEmpty(authenticationEvent.ExternalTokenIssuer);
+                created[i] = authenticationEvent.Created.Value.UtcDateTime;
+                userId[i] = authenticationEvent.UserId;
+                supplierId[i] = NullIfEmpty(authenticationEvent.SupplierId);
+                orgNumber[i] = authenticationEvent.OrgNumber;
+                eventTypeId[i] = Convert.ToInt32(authenticationEvent.EventType);
+                authenticationMethodId[i] = authenticationEvent.AuthenticationMethod is null ? null : Convert.ToInt32(authenticationEvent.AuthenticationMethod);
+                authenticationLevelId[i] = authenticationEvent.AuthenticationLevel is null ? null : Convert.ToInt32(authenticationEvent.AuthenticationLevel);
+                ipAddress[i] = NullIfEmpty(authenticationEvent.IpAddress);
+                isAuthenticated[i] = authenticationEvent.IsAuthenticated;
+            }
+
+            try
+            {
+                await using NpgsqlConnection pgcon = await _dataSource.OpenConnectionAsync(cancellationToken);
+                await using NpgsqlCommand pgcom = pgcon.CreateCommand(INSERTAUTHNEVENTS);
+
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("sessionid", sessionId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("externalsessionid", externalSessionId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("subscriptionkey", subscriptionKey) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("externaltokenissuer", externalTokenIssuer) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<DateTime[]>("created", created) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.TimestampTz });
+                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("userid", userId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("supplierid", supplierId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("orgnumber", orgNumber) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
+                pgcom.Parameters.Add(new NpgsqlParameter<int[]>("eventtypeid", eventTypeId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
+                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("authenticationmethodid", authenticationMethodId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
+                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("authenticationlevelid", authenticationLevelId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
+                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("ipaddress", ipAddress) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+                pgcom.Parameters.Add(new NpgsqlParameter<bool[]>("isauthenticated", isAuthenticated) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Boolean });
+
+                await pgcom.PrepareAsync(cancellationToken);
+                var inserted = await pgcom.ExecuteNonQueryAsync(cancellationToken);
+                if (inserted != count)
+                {
+                    throw new InvalidOperationException($"Expected to insert {count} authentication events, but {inserted} rows were affected");
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "AuditLog // AuthenticationEventRepository // InsertAuthenticationEvents // Exception (batch size {BatchSize})", count);
+                throw;
+            }
+        }
+
+        private static string? NullIfEmpty(string? value)
+            => string.IsNullOrEmpty(value) ? null : value;
     }
 }

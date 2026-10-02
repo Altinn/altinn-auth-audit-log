@@ -61,6 +61,9 @@ public abstract class WebApplicationTests
             configureConfiguration: config =>
             {
                 _db.ConfigureConfiguration(config, "auditlog");
+
+                // The in-process queue consumers need a storage account; keep them off in the web host tests.
+                config.AddInMemoryCollection([new("QueueConsumer:Enabled", "false")]);
                 ConfigureTestConfiguration(config);
             },
             configureServices: services =>
