@@ -18,8 +18,11 @@ public enum BatchOutcome
     /// <summary>The batch failed with a transient error; messages were left on the queue for redelivery.</summary>
     TransientFailure,
 
-    /// <summary>The batch failed permanently and was processed message by message (see counters for details).</summary>
+    /// <summary>The batch was rejected because of message data and was processed message by message (see counters for details).</summary>
     FallbackPerMessage,
+
+    /// <summary>The batch failed because of a system problem (schema, privileges, configuration); messages were left on the queue and the circuit breaker was notified.</summary>
+    SystemicFailure,
 }
 
 /// <summary>
@@ -33,9 +36,11 @@ public enum BatchOutcome
 ///   <item><b>Transient persist failure</b> (DB down, timeout, missing partition): roll back, retry in-process with
 ///   exponential backoff, then leave the messages on the queue; they reappear after the visibility timeout.
 ///   Repeated transient failures open a circuit breaker that pauses receiving.</item>
-///   <item><b>Permanent failure of a single message</b> (undecodable, fails validation, rejected by the DB): the message
-///   is copied to the poison queue and deleted. A permanent failure of a whole batch triggers per-message fallback to
+///   <item><b>Data error of a single message</b> (undecodable, fails validation, rejected by a DB constraint): the message
+///   is copied to the poison queue and deleted. A data error on a whole batch triggers per-message fallback to
 ///   find the offending message(s).</item>
+///   <item><b>Systemic failure</b> (schema mismatch, insufficient privilege, unknown exception): nothing is poisoned;
+///   the messages stay on the queue and the circuit breaker pauses consumption.</item>
 ///   <item><b>Repeated failure</b>: a message dequeued more than <see cref="QueueSettings.MaxDequeueCount"/> times is poisoned
 ///   regardless of cause.</item>
 ///   <item><b>Failure after commit</b> (delete fails, pod killed): the message is redelivered and becomes a duplicate row;
@@ -49,6 +54,7 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
     private readonly IQueueEventProcessor<TEvent> _processor;
     private readonly QueueSettings _settings;
     private readonly TimeSpan _depthSampleInterval;
+    private readonly bool _createQueuesIfNotExists;
     private readonly QueueConsumerMetrics _metrics;
     private readonly QueueConsumerHealthState _health;
     private readonly TimeProvider _timeProvider;
@@ -61,6 +67,7 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
         IQueueEventProcessor<TEvent> processor,
         QueueSettings settings,
         TimeSpan depthSampleInterval,
+        bool createQueuesIfNotExists,
         QueueConsumerMetrics metrics,
         QueueConsumerHealthState health,
         TimeProvider timeProvider,
@@ -70,6 +77,7 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
         _processor = processor;
         _settings = settings;
         _depthSampleInterval = depthSampleInterval;
+        _createQueuesIfNotExists = createQueuesIfNotExists;
         _metrics = metrics;
         _health = health;
         _timeProvider = timeProvider;
@@ -99,7 +107,11 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
 
         try
         {
-            await EnsureQueuesAsync(stoppingToken);
+            if (_createQueuesIfNotExists)
+            {
+                // Opt-in: needs queues/write (Storage Queue Data Contributor), which the message-level roles do not grant.
+                await EnsureQueuesAsync(stoppingToken);
+            }
 
             var tasks = new List<Task>(_settings.Concurrency + 1);
             for (var i = 0; i < _settings.Concurrency; i++)
@@ -296,10 +308,17 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
                 RecordTransientFailure();
                 return Complete(BatchOutcome.TransientFailure, start);
 
-            case PersistResultKind.Permanent:
-                QueueConsumerLog.PermanentBatchFailure(_logger, result.Exception!, decoded.Count, queue);
+            case PersistResultKind.DataError:
+                QueueConsumerLog.DataErrorBatchFailure(_logger, result.Exception!, decoded.Count, queue);
                 await FallbackPerMessageAsync(decoded, cancellationToken);
                 return Complete(BatchOutcome.FallbackPerMessage, start);
+
+            case PersistResultKind.Systemic:
+                // Schema, privilege or programming error: every message would fail the same way. Poisoning would
+                // delete valid audit events from the source queue, so leave them and pause via the circuit breaker.
+                QueueConsumerLog.SystemicBatchFailure(_logger, result.Exception!, decoded.Count, queue);
+                RecordTransientFailure();
+                return Complete(BatchOutcome.SystemicFailure, start);
 
             default:
                 throw new UnreachableException();
@@ -307,11 +326,12 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
     }
 
     /// <summary>
-    /// A batch failed permanently: persist each message on its own so a single bad row does not block the others.
+    /// A batch was rejected because of message data: persist each message on its own so a single bad row does not
+    /// block the others. Only a message that fails with a data error on its own is poisoned.
     /// </summary>
     private async Task FallbackPerMessageAsync(List<(RawQueueMessage Message, TEvent Event)> decoded, CancellationToken cancellationToken)
     {
-        var anyTransient = false;
+        var anyLeftOnQueue = false;
         var anyCommitted = false;
 
         foreach (var (message, @event) in decoded)
@@ -324,19 +344,24 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
                     anyCommitted = true;
                     break;
 
-                case PersistResultKind.Permanent:
-                    QueueConsumerLog.PermanentMessageFailure(_logger, result.Exception!, message.MessageId, _queue.Name);
+                case PersistResultKind.DataError:
+                    QueueConsumerLog.DataErrorMessageFailure(_logger, result.Exception!, message.MessageId, _queue.Name);
                     await PoisonAsync(message, "persist_failed", cancellationToken);
+                    break;
+
+                case PersistResultKind.Systemic:
+                    QueueConsumerLog.SystemicBatchFailure(_logger, result.Exception!, 1, _queue.Name);
+                    anyLeftOnQueue = true;
                     break;
 
                 case PersistResultKind.Transient:
                     // Leave it; redelivered after the visibility timeout.
-                    anyTransient = true;
+                    anyLeftOnQueue = true;
                     break;
             }
         }
 
-        if (anyTransient)
+        if (anyLeftOnQueue)
         {
             RecordTransientFailure();
         }
@@ -365,9 +390,13 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
             }
             catch (Exception ex)
             {
-                if (!TransientErrorClassifier.IsTransient(ex))
+                switch (PersistFailureClassifier.Classify(ex))
                 {
-                    return PersistResult.Permanent(ex);
+                    case PersistFailureClass.DataError:
+                        return PersistResult.DataError(ex);
+
+                    case PersistFailureClass.Systemic:
+                        return PersistResult.Systemic(ex);
                 }
 
                 last = ex;
@@ -485,6 +514,7 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
             BatchOutcome.NothingToPersist => "nothing_to_persist",
             BatchOutcome.TransientFailure => "transient_failure",
             BatchOutcome.FallbackPerMessage => "fallback_per_message",
+            BatchOutcome.SystemicFailure => "systemic_failure",
             _ => "unknown",
         };
 
@@ -492,7 +522,8 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
     {
         Committed,
         Transient,
-        Permanent,
+        DataError,
+        Systemic,
     }
 
     private readonly record struct PersistResult(PersistResultKind Kind, Exception? Exception)
@@ -501,6 +532,8 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
 
         public static PersistResult Transient(Exception exception) => new(PersistResultKind.Transient, exception);
 
-        public static PersistResult Permanent(Exception exception) => new(PersistResultKind.Permanent, exception);
+        public static PersistResult DataError(Exception exception) => new(PersistResultKind.DataError, exception);
+
+        public static PersistResult Systemic(Exception exception) => new(PersistResultKind.Systemic, exception);
     }
 }

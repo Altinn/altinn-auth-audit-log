@@ -38,11 +38,14 @@ internal static partial class QueueConsumerLog
     [LoggerMessage(11, LogLevel.Error, "Transient failures exhausted for batch of {BatchSize} from queue '{Queue}'; messages left on the queue and become visible again after the visibility timeout")]
     public static partial void TransientPersistExhausted(ILogger logger, Exception exception, int batchSize, string queue);
 
-    [LoggerMessage(12, LogLevel.Error, "Permanent failure persisting batch of {BatchSize} from queue '{Queue}'; falling back to per-message processing to isolate the offending message(s)")]
-    public static partial void PermanentBatchFailure(ILogger logger, Exception exception, int batchSize, string queue);
+    [LoggerMessage(12, LogLevel.Error, "Batch of {BatchSize} from queue '{Queue}' was rejected because of message data; falling back to per-message processing to isolate the offending message(s)")]
+    public static partial void DataErrorBatchFailure(ILogger logger, Exception exception, int batchSize, string queue);
 
-    [LoggerMessage(13, LogLevel.Error, "Message {MessageId} on queue '{Queue}' failed permanently when persisted on its own; moving to poison queue")]
-    public static partial void PermanentMessageFailure(ILogger logger, Exception exception, string messageId, string queue);
+    [LoggerMessage(13, LogLevel.Error, "Message {MessageId} on queue '{Queue}' was rejected because of its data when persisted on its own; moving to poison queue")]
+    public static partial void DataErrorMessageFailure(ILogger logger, Exception exception, string messageId, string queue);
+
+    [LoggerMessage(18, LogLevel.Critical, "Systemic failure persisting batch of {BatchSize} from queue '{Queue}' (schema, privileges or configuration); nothing poisoned, messages left on the queue, pausing consumption via circuit breaker")]
+    public static partial void SystemicBatchFailure(ILogger logger, Exception exception, int batchSize, string queue);
 
     [LoggerMessage(14, LogLevel.Warning, "Message {MessageId} on queue '{Queue}' was committed to the database but could not be deleted from the queue; it will be redelivered (duplicate)")]
     public static partial void DeleteFailed(ILogger logger, Exception exception, string messageId, string queue);

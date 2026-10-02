@@ -33,6 +33,15 @@ public class QueueConsumerSettings
     public string? ServiceUri { get; set; }
 
     /// <summary>
+    /// When <see langword="true"/> the consumer creates the source and poison queues at startup if they do not exist.
+    /// This requires <c>Microsoft.Storage/storageAccounts/queueServices/queues/write</c> (e.g. <em>Storage Queue Data
+    /// Contributor</em>), which the message-level roles documented on <see cref="ServiceUri"/> do not grant. Defaults to
+    /// <see langword="false"/>: queues are expected to be provisioned by infrastructure (and the producers already create
+    /// the source queues). Useful for local development against Azurite.
+    /// </summary>
+    public bool CreateQueuesIfNotExists { get; set; }
+
+    /// <summary>
     /// A consumer that has not completed a successful receive within this period is reported as unhealthy.
     /// </summary>
     public TimeSpan HealthStaleAfter { get; set; } = TimeSpan.FromMinutes(5);

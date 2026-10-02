@@ -22,10 +22,13 @@ The container app reads the queues directly with two `QueueBatchConsumer` backgr
 
 Delivery is at-least-once with an explicit retry design:
 - Transient failures (database unavailable, timeout, missing partition) are retried in-process with exponential backoff; if they persist the messages are left on the queue and become visible again after the visibility timeout. Repeated transient failures open a circuit breaker that pauses receiving.
-- Permanent failures (undecodable message, validation error, row rejected by the database) are isolated per message and moved to `<queue>-poison`, the same convention the previous Azure Functions trigger used.
+- Data errors (undecodable message, validation error, row rejected by a database constraint) are isolated per message and moved to `<queue>-poison`, the same convention the previous Azure Functions trigger used.
+- Systemic failures (schema mismatch, insufficient privilege, unknown exceptions) never poison anything: the messages stay on the queue and the circuit breaker pauses consumption until the system is fixed.
 - A message dequeued more than `MaxDequeueCount` times is poisoned regardless of cause.
 
-The consumers are configured in the `QueueConsumer` section of `appsettings.json` (feature flag `QueueConsumer:Enabled`, `ConnectionString` or `ServiceUri` + managed identity, batch size, concurrency, visibility timeout, retry and circuit breaker settings). Metrics are published on the OpenTelemetry meter `Altinn.Auth.AuditLog` (`auditlog.queue.*`), and the `queue-consumer` health check reports a consumer that has stopped receiving.
+The consumers are configured in the `QueueConsumer` section of `appsettings.json` (feature flag `QueueConsumer:Enabled`, `ConnectionString` or `ServiceUri` + managed identity, batch size, concurrency, visibility timeout, retry and circuit breaker settings). Every enabled queue's settings are validated at startup.
+
+Required Azure RBAC with `ServiceUri` (managed identity): *Storage Queue Data Message Processor* on the source queues (receive/delete) and *Storage Queue Data Message Sender* on the poison queues. The consumer does not create queues unless `QueueConsumer:CreateQueuesIfNotExists` is set (which additionally needs *Storage Queue Data Contributor*); the source queues are created by the producers and the poison queues should be provisioned by infrastructure. Metrics are published on the OpenTelemetry meter `Altinn.Auth.AuditLog` (`auditlog.queue.*`), and the `queue-consumer` health check reports a consumer that has stopped receiving.
 
 The Azure Functions app in `src/Functions` is the previous queue consumer. It is kept until the in-process consumers have been verified in production and will then be removed (see #335).
 

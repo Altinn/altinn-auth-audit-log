@@ -2,6 +2,7 @@ using Altinn.Auth.AuditLog.Configuration;
 using Altinn.Auth.AuditLog.Core.Queue;
 using Altinn.Auth.AuditLog.Queue;
 using Microsoft.Extensions.Logging.Abstractions;
+using Npgsql;
 using System.Diagnostics.Metrics;
 using System.Text;
 
@@ -114,13 +115,13 @@ public class QueueBatchConsumerTests
     }
 
     [Fact]
-    public async Task ProcessBatch_PermanentBatchFailure_FallsBackPerMessage_AndPoisonsOnlyTheBadOne()
+    public async Task ProcessBatch_DataErrorOnBatch_FallsBackPerMessage_AndPoisonsOnlyTheBadOne()
     {
         var queue = new FakeRawQueue();
         var processor = new FakeProcessor
         {
             Persist = (events, _) => events.Contains("poisonme")
-                ? throw new InvalidOperationException("constraint violated")
+                ? throw DataError()
                 : Task.CompletedTask,
         };
         var sut = CreateConsumer(queue, processor);
@@ -141,7 +142,7 @@ public class QueueBatchConsumerTests
         var processor = new FakeProcessor
         {
             Persist = (events, _) => events.Count > 1
-                ? throw new InvalidOperationException("batch failed")
+                ? throw DataError()
                 : events[0] == "flaky" ? throw new TimeoutException() : Task.CompletedTask,
         };
         var sut = CreateConsumer(queue, processor, s => s.TransientRetryAttempts = 2);
@@ -172,6 +173,63 @@ public class QueueBatchConsumerTests
         await sut.ProcessBatchAsync(Messages("b"), CancellationToken.None);
         Assert.True(sut.Circuit.IsOpen(out var remaining));
         Assert.True(remaining > TimeSpan.Zero);
+    }
+
+    [Theory]
+    [InlineData("42703")] // undefined column: schema mismatch
+    [InlineData("42501")] // insufficient privilege
+    public async Task ProcessBatch_SystemicFailure_PoisonsNothing_LeavesMessages_AndTripsCircuit(string sqlState)
+    {
+        var queue = new FakeRawQueue();
+        var processor = new FakeProcessor
+        {
+            Persist = (_, _) => throw new PostgresException("boom", "ERROR", "ERROR", sqlState),
+        };
+        var sut = CreateConsumer(queue, processor, s => s.CircuitBreakFailuresBeforeOpen = 1);
+
+        var outcome = await sut.ProcessBatchAsync(Messages("a", "b", "c"), CancellationToken.None);
+
+        Assert.Equal(BatchOutcome.SystemicFailure, outcome);
+        Assert.Single(processor.Batches); // no per-message fallback, no in-process retry
+        Assert.Empty(queue.Poisoned);
+        Assert.Empty(queue.Deleted);
+        Assert.True(sut.Circuit.IsOpen(out _));
+    }
+
+    [Fact]
+    public async Task ProcessBatch_UnknownException_IsTreatedAsSystemic_NotPoisoned()
+    {
+        var queue = new FakeRawQueue();
+        var processor = new FakeProcessor { Persist = (_, _) => throw new InvalidOperationException("bug") };
+        var sut = CreateConsumer(queue, processor);
+
+        var outcome = await sut.ProcessBatchAsync(Messages("a"), CancellationToken.None);
+
+        Assert.Equal(BatchOutcome.SystemicFailure, outcome);
+        Assert.Empty(queue.Poisoned);
+        Assert.Empty(queue.Deleted);
+        Assert.Equal(1, sut.Circuit.ConsecutiveFailures);
+    }
+
+    [Fact]
+    public async Task ProcessBatch_FallbackHitsSystemic_LeavesThatMessage_AndTripsCircuit()
+    {
+        // Batch rejected as a data error, but the per-message insert reveals a system problem for one message.
+        var queue = new FakeRawQueue();
+        var processor = new FakeProcessor
+        {
+            Persist = (events, _) => events.Count > 1
+                ? throw DataError()
+                : events[0] == "sys" ? throw new PostgresException("boom", "ERROR", "ERROR", "42501") : Task.CompletedTask,
+        };
+        var sut = CreateConsumer(queue, processor);
+
+        var outcome = await sut.ProcessBatchAsync(Messages("a", "sys"), CancellationToken.None);
+
+        Assert.Equal(BatchOutcome.FallbackPerMessage, outcome);
+        Assert.Equal("a", Assert.Single(queue.Deleted).Body.ToString());
+        Assert.Empty(queue.Poisoned);
+        Assert.Equal(1, sut.Circuit.ConsecutiveFailures);
     }
 
     [Fact]
@@ -295,6 +353,7 @@ public class QueueBatchConsumerTests
             processor,
             settings,
             depthSampleInterval: TimeSpan.Zero,
+            createQueuesIfNotExists: false,
             new QueueConsumerMetrics(new TestMeterFactory()),
             new QueueConsumerHealthState(),
             TimeProvider.System,
@@ -303,6 +362,10 @@ public class QueueBatchConsumerTests
 
     private static RawQueueMessage[] Messages(params string[] bodies)
         => bodies.Select(b => Message(b)).ToArray();
+
+    /// <summary>A foreign key violation: the database rejects the row because of its data.</summary>
+    private static PostgresException DataError()
+        => new("insert or update violates foreign key constraint", "ERROR", "ERROR", PostgresErrorCodes.ForeignKeyViolation);
 
     private static RawQueueMessage Message(string body, long dequeueCount = 1)
         => new(Guid.NewGuid().ToString("N"), "pop-" + Guid.NewGuid().ToString("N"), BinaryData.FromString(body), dequeueCount, DateTimeOffset.UtcNow);

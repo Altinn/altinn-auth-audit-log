@@ -7,6 +7,7 @@ using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Metrics;
+using System.ComponentModel.DataAnnotations;
 
 namespace Altinn.Auth.AuditLog.Queue;
 
@@ -84,6 +85,7 @@ public static class QueueConsumerDependencyInjectionExtensions
                 sp.GetRequiredService<IQueueEventProcessor<TEvent>>(),
                 queueSettings,
                 all.DepthSampleInterval,
+                all.CreateQueuesIfNotExists,
                 sp.GetRequiredService<QueueConsumerMetrics>(),
                 sp.GetRequiredService<QueueConsumerHealthState>(),
                 sp.GetRequiredService<TimeProvider>(),
@@ -91,8 +93,17 @@ public static class QueueConsumerDependencyInjectionExtensions
         });
     }
 
-    private static bool ValidateSettings(QueueConsumerSettings settings)
+    /// <summary>
+    /// Validates the settings at startup. <c>ValidateDataAnnotations</c> does not descend into the nested
+    /// <see cref="QueueSettings"/>, so every enabled queue is validated explicitly here, including the
+    /// <c>[Range]</c> attributes and the time spans.
+    /// </summary>
+    internal static bool ValidateSettings(QueueConsumerSettings settings)
+        => ValidateSettings(settings, out _);
+
+    internal static bool ValidateSettings(QueueConsumerSettings settings, out string? error)
     {
+        error = null;
         if (!settings.Enabled)
         {
             return true;
@@ -100,17 +111,76 @@ public static class QueueConsumerDependencyInjectionExtensions
 
         if (string.IsNullOrEmpty(settings.ConnectionString) && string.IsNullOrEmpty(settings.ServiceUri))
         {
+            error = "Either ConnectionString or ServiceUri must be set";
             return false;
         }
 
-        if (!string.IsNullOrEmpty(settings.ServiceUri) && string.IsNullOrEmpty(settings.ConnectionString) && !Uri.TryCreate(settings.ServiceUri, UriKind.Absolute, out _))
+        if (string.IsNullOrEmpty(settings.ConnectionString) && !Uri.TryCreate(settings.ServiceUri, UriKind.Absolute, out _))
         {
+            error = "ServiceUri must be an absolute URI";
             return false;
         }
 
-        return ValidateQueue(settings.Authorization) && ValidateQueue(settings.Authentication);
+        if (settings.HealthStaleAfter <= TimeSpan.Zero)
+        {
+            error = "HealthStaleAfter must be positive";
+            return false;
+        }
 
-        static bool ValidateQueue(QueueSettings queue)
-            => !queue.Enabled || !string.IsNullOrWhiteSpace(queue.QueueName);
+        return ValidateQueue("Authorization", settings.Authorization, out error)
+            && ValidateQueue("Authentication", settings.Authentication, out error);
+    }
+
+    private static bool ValidateQueue(string name, QueueSettings queue, out string? error)
+    {
+        error = null;
+        if (!queue.Enabled)
+        {
+            return true;
+        }
+
+        var results = new List<ValidationResult>();
+        if (!Validator.TryValidateObject(queue, new ValidationContext(queue), results, validateAllProperties: true))
+        {
+            error = $"{name}: {string.Join("; ", results.Select(r => r.ErrorMessage))}";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(queue.QueueName))
+        {
+            error = $"{name}: QueueName is required";
+            return false;
+        }
+
+        foreach (var (property, value) in new[]
+        {
+            (nameof(QueueSettings.VisibilityTimeout), queue.VisibilityTimeout),
+            (nameof(QueueSettings.EmptyQueueBackoff), queue.EmptyQueueBackoff),
+            (nameof(QueueSettings.ReceiveFailureBackoff), queue.ReceiveFailureBackoff),
+            (nameof(QueueSettings.CircuitBreakOpenDuration), queue.CircuitBreakOpenDuration),
+            (nameof(QueueSettings.ShutdownGracePeriod), queue.ShutdownGracePeriod),
+        })
+        {
+            if (value <= TimeSpan.Zero)
+            {
+                error = $"{name}: {property} must be positive";
+                return false;
+            }
+        }
+
+        if (queue.TransientRetryBaseDelay < TimeSpan.Zero)
+        {
+            error = $"{name}: TransientRetryBaseDelay must not be negative";
+            return false;
+        }
+
+        // Azure caps the visibility timeout at 7 days.
+        if (queue.VisibilityTimeout > TimeSpan.FromDays(7))
+        {
+            error = $"{name}: VisibilityTimeout must be at most 7 days";
+            return false;
+        }
+
+        return true;
     }
 }
