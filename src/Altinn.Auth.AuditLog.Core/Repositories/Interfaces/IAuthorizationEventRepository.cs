@@ -13,5 +13,13 @@ namespace Altinn.Auth.AuditLog.Core.Repositories.Interfaces
     public interface IAuthorizationEventRepository
     {
         Task InsertAuthorizationEvent(AuthorizationEvent authorizationEvent);
+
+        /// <summary>
+        /// Inserts a batch of authorization events in a single statement (and thus a single transaction).
+        /// Either all events are inserted, or none are.
+        /// </summary>
+        /// <param name="authorizationEvents">The events to insert.</param>
+        /// <param name="cancellationToken">A <see cref="CancellationToken"/>.</param>
+        Task InsertAuthorizationEvents(IReadOnlyList<AuthorizationEvent> authorizationEvents, CancellationToken cancellationToken = default);
     }
 }

@@ -18,5 +18,13 @@ namespace Altinn.Auth.AuditLog.Core.Repositories.Interfaces
         /// <param name="authenticationEvent"></param>
         /// <returns></returns>
         Task InsertAuthenticationEvent(AuthenticationEvent authenticationEvent);
+
+        /// <summary>
+        /// Inserts a batch of authentication events in a single statement (and thus a single transaction).
+        /// Either all events are inserted, or none are.
+        /// </summary>
+        /// <param name="authenticationEvents">The events to insert.</param>
+        /// <param name="cancellationToken">A <see cref="CancellationToken"/>.</param>
+        Task InsertAuthenticationEvents(IReadOnlyList<AuthenticationEvent> authenticationEvents, CancellationToken cancellationToken = default);
     }
 }

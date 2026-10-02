@@ -1,8 +1,10 @@
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
+using Altinn.Auth.AuditLog.Persistence.Extensions;
 using Altinn.Authorization.ServiceDefaults.Npgsql;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using NpgsqlTypes;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -122,6 +124,151 @@ namespace Altinn.Auth.AuditLog.Persistence
                 throw;
             }
         }
+
+        /// <inheritdoc/>
+        public async Task InsertAuthorizationEvents(IReadOnlyList<AuthorizationEvent> authorizationEvents, CancellationToken cancellationToken = default)
+        {
+            // One statement == one transaction: either every row is inserted, or none are.
+            // unnest over typed array parameters keeps this a single prepared statement regardless of batch size,
+            // and (unlike COPY) leaves room for ON CONFLICT when dedup lands.
+            const string INSERTAUTHZEVENTS = /*strpsql*/
+            """
+            INSERT INTO authz.eventlogv1(
+                sessionid,
+                created,
+                subjectuserid,
+                subjectorgcode,
+                subjectorgnumber,
+                subjectparty,
+                resourcepartyid,
+                resource,
+                instanceid,
+                operation,
+                ipaddress,
+                contextrequestjson,
+                decision,
+                subject_party_uuid,
+                trace_id
+            )
+            SELECT * FROM unnest(
+                @sessionid,
+                @created,
+                @subjectuserid,
+                @subjectorgcode,
+                @subjectorgnumber,
+                @subjectparty,
+                @resourcepartyid,
+                @resource,
+                @instanceid,
+                @operation,
+                @ipaddress,
+                @contextrequestjson,
+                @decision,
+                @subjectpartyuuid,
+                @trace_id
+            )
+            """;
+
+            ArgumentNullException.ThrowIfNull(authorizationEvents);
+            if (authorizationEvents.Count == 0)
+            {
+                return;
+            }
+
+            var count = authorizationEvents.Count;
+            var sessionId = new string?[count];
+            var created = new DateTime[count];
+            var subjectUserId = new int?[count];
+            var subjectOrgCode = new string?[count];
+            var subjectOrgNumber = new int?[count];
+            var subjectParty = new int?[count];
+            var resourcePartyId = new int?[count];
+            var resource = new string?[count];
+            var instanceId = new string?[count];
+            var operation = new string?[count];
+            var ipAddress = new string?[count];
+            var contextRequestJson = new string[count];
+            var decision = new int[count];
+            var subjectPartyUuid = new string?[count];
+            var traceId = new string?[count];
+
+            for (var i = 0; i < count; i++)
+            {
+                var authorizationEvent = authorizationEvents[i];
+                if (authorizationEvent is null)
+                {
+                    throw new ArgumentNullException(nameof(authorizationEvents), $"Event at index {i} is null");
+                }
+
+                if (!authorizationEvent.Created.HasValue)
+                {
+                    throw new ArgumentNullException(nameof(authorizationEvents), $"Event at index {i}: Created must not be null");
+                }
+
+                if (string.IsNullOrEmpty(authorizationEvent.Operation))
+                {
+                    throw new ArgumentNullException(nameof(authorizationEvents), $"Event at index {i}: Operation must not be null or empty");
+                }
+
+                if (authorizationEvent.ContextRequestJson.ValueKind != JsonValueKind.Object)
+                {
+                    throw new ArgumentNullException(nameof(authorizationEvents), $"Event at index {i}: Context request must be an object");
+                }
+
+                if (!authorizationEvent.Decision.HasValue)
+                {
+                    throw new ArgumentNullException(nameof(authorizationEvents), $"Event at index {i}: Decision must not be null");
+                }
+
+                var decisionValue = ((int)authorizationEvent.Decision.Value) + 1 /* db starts at value 1 */;
+                Assert(decisionValue is >= 1 and <= 4);
+
+                sessionId[i] = NullIfEmpty(authorizationEvent.SessionId);
+                created[i] = authorizationEvent.Created.Value.UtcDateTime;
+                subjectUserId[i] = authorizationEvent.SubjectUserId;
+                subjectOrgCode[i] = NullIfEmpty(authorizationEvent.SubjectOrgCode);
+                subjectOrgNumber[i] = authorizationEvent.SubjectOrgNumber;
+                subjectParty[i] = authorizationEvent.SubjectParty;
+                resourcePartyId[i] = authorizationEvent.ResourcePartyId;
+                resource[i] = NullIfEmpty(authorizationEvent.Resource);
+                instanceId[i] = NullIfEmpty(authorizationEvent.InstanceId);
+                operation[i] = authorizationEvent.Operation;
+                ipAddress[i] = NullIfEmpty(authorizationEvent.IpAdress);
+                contextRequestJson[i] = authorizationEvent.ContextRequestJson.GetRawText();
+                decision[i] = decisionValue;
+                subjectPartyUuid[i] = NullIfEmpty(authorizationEvent.SubjectPartyUuid);
+                traceId[i] = NullIfEmpty(authorizationEvent.TraceId);
+            }
+
+            await using NpgsqlConnection pgcon = await _dataSource.OpenConnectionAsync(cancellationToken);
+            await using NpgsqlCommand pgcom = pgcon.CreateCommand(INSERTAUTHZEVENTS);
+
+            pgcom.Parameters.Add<string?[]>("sessionid", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = sessionId;
+            pgcom.Parameters.Add<DateTime[]>("created", NpgsqlDbType.Array | NpgsqlDbType.TimestampTz).TypedValue = created;
+            pgcom.Parameters.Add<int?[]>("subjectuserid", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = subjectUserId;
+            pgcom.Parameters.Add<string?[]>("subjectorgcode", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = subjectOrgCode;
+            pgcom.Parameters.Add<int?[]>("subjectorgnumber", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = subjectOrgNumber;
+            pgcom.Parameters.Add<int?[]>("subjectparty", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = subjectParty;
+            pgcom.Parameters.Add<int?[]>("resourcepartyid", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = resourcePartyId;
+            pgcom.Parameters.Add<string?[]>("resource", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = resource;
+            pgcom.Parameters.Add<string?[]>("instanceid", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = instanceId;
+            pgcom.Parameters.Add<string?[]>("operation", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = operation;
+            pgcom.Parameters.Add<string?[]>("ipaddress", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = ipAddress;
+            pgcom.Parameters.Add<string[]>("contextrequestjson", NpgsqlDbType.Array | NpgsqlDbType.Jsonb).TypedValue = contextRequestJson;
+            pgcom.Parameters.Add<int[]>("decision", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = decision;
+            pgcom.Parameters.Add<string?[]>("subjectpartyuuid", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = subjectPartyUuid;
+            pgcom.Parameters.Add<string?[]>("trace_id", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = traceId;
+
+            await pgcom.PrepareAsync(cancellationToken);
+            var inserted = await pgcom.ExecuteNonQueryAsync(cancellationToken);
+            if (inserted != count)
+            {
+                throw new InvalidOperationException($"Expected to insert {count} authorization events, but {inserted} rows were affected");
+            }
+        }
+
+        private static string? NullIfEmpty(string? value)
+            => string.IsNullOrEmpty(value) ? null : value;
 
         private static void Assert(
             [DoesNotReturnIf(false)] bool condition,
