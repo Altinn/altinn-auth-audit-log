@@ -31,9 +31,11 @@ public interface IRawQueue
     Task EnsureExistsAsync(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Receives up to <paramref name="maxMessages"/> messages, making them invisible for <paramref name="visibilityTimeout"/>.
+    /// Receives up to <paramref name="maxMessages"/> messages, making them invisible for <paramref name="visibilityTimeout"/>,
+    /// and appends them to <paramref name="destination"/>.
     /// </summary>
-    Task<IReadOnlyList<RawQueueMessage>> ReceiveAsync(int maxMessages, TimeSpan visibilityTimeout, CancellationToken cancellationToken);
+    /// <returns>The number of messages received.</returns>
+    Task<int> ReceiveAsync(int maxMessages, TimeSpan visibilityTimeout, List<RawQueueMessage> destination, CancellationToken cancellationToken);
 
     /// <summary>
     /// Deletes a message. Only called after the message has been durably persisted (or moved to poison).

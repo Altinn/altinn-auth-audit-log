@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
+using Altinn.Auth.AuditLog.Persistence.Extensions;
 using Altinn.Authorization.ServiceDefaults.Npgsql;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -190,36 +191,28 @@ namespace Altinn.Auth.AuditLog.Persistence
                 isAuthenticated[i] = authenticationEvent.IsAuthenticated;
             }
 
-            try
-            {
-                await using NpgsqlConnection pgcon = await _dataSource.OpenConnectionAsync(cancellationToken);
-                await using NpgsqlCommand pgcom = pgcon.CreateCommand(INSERTAUTHNEVENTS);
+            await using NpgsqlConnection pgcon = await _dataSource.OpenConnectionAsync(cancellationToken);
+            await using NpgsqlCommand pgcom = pgcon.CreateCommand(INSERTAUTHNEVENTS);
 
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("sessionid", sessionId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("externalsessionid", externalSessionId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("subscriptionkey", subscriptionKey) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("externaltokenissuer", externalTokenIssuer) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<DateTime[]>("created", created) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.TimestampTz });
-                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("userid", userId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("supplierid", supplierId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("orgnumber", orgNumber) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
-                pgcom.Parameters.Add(new NpgsqlParameter<int[]>("eventtypeid", eventTypeId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
-                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("authenticationmethodid", authenticationMethodId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
-                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("authenticationlevelid", authenticationLevelId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("ipaddress", ipAddress) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<bool[]>("isauthenticated", isAuthenticated) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Boolean });
+            pgcom.Parameters.Add<string?[]>("sessionid", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = sessionId;
+            pgcom.Parameters.Add<string?[]>("externalsessionid", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = externalSessionId;
+            pgcom.Parameters.Add<string?[]>("subscriptionkey", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = subscriptionKey;
+            pgcom.Parameters.Add<string?[]>("externaltokenissuer", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = externalTokenIssuer;
+            pgcom.Parameters.Add<DateTime[]>("created", NpgsqlDbType.Array | NpgsqlDbType.TimestampTz).TypedValue = created;
+            pgcom.Parameters.Add<int?[]>("userid", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = userId;
+            pgcom.Parameters.Add<string?[]>("supplierid", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = supplierId;
+            pgcom.Parameters.Add<int?[]>("orgnumber", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = orgNumber;
+            pgcom.Parameters.Add<int[]>("eventtypeid", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = eventTypeId;
+            pgcom.Parameters.Add<int?[]>("authenticationmethodid", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = authenticationMethodId;
+            pgcom.Parameters.Add<int?[]>("authenticationlevelid", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = authenticationLevelId;
+            pgcom.Parameters.Add<string?[]>("ipaddress", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = ipAddress;
+            pgcom.Parameters.Add<bool[]>("isauthenticated", NpgsqlDbType.Array | NpgsqlDbType.Boolean).TypedValue = isAuthenticated;
 
-                await pgcom.PrepareAsync(cancellationToken);
-                var inserted = await pgcom.ExecuteNonQueryAsync(cancellationToken);
-                if (inserted != count)
-                {
-                    throw new InvalidOperationException($"Expected to insert {count} authentication events, but {inserted} rows were affected");
-                }
-            }
-            catch (Exception e)
+            await pgcom.PrepareAsync(cancellationToken);
+            var inserted = await pgcom.ExecuteNonQueryAsync(cancellationToken);
+            if (inserted != count)
             {
-                _logger.LogError(e, "AuditLog // AuthenticationEventRepository // InsertAuthenticationEvents // Exception (batch size {BatchSize})", count);
-                throw;
+                throw new InvalidOperationException($"Expected to insert {count} authentication events, but {inserted} rows were affected");
             }
         }
 

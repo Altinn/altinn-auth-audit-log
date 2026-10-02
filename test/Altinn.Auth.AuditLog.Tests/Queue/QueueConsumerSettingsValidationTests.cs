@@ -8,7 +8,7 @@ public class QueueConsumerSettingsValidationTests
     [Fact]
     public void Disabled_IsAlwaysValid()
     {
-        var settings = new QueueConsumerSettings { Enabled = false, Authorization = { Concurrency = 0, BatchSize = 99 } };
+        var settings = new QueueConsumerSettings { Enabled = false, Authorization = { MaxConcurrentBatches = 0, BatchSize = 99 } };
 
         Assert.True(QueueConsumerDependencyInjectionExtensions.ValidateSettings(settings, out _));
     }
@@ -46,14 +46,25 @@ public class QueueConsumerSettingsValidationTests
     [Theory]
     [InlineData(0)]
     [InlineData(65)]
-    public void NestedQueue_ConcurrencyOutOfRange_IsInvalid(int concurrency)
+    public void NestedQueue_MaxConcurrentBatchesOutOfRange_IsInvalid(int maxConcurrentBatches)
     {
         var settings = Valid();
-        settings.Authorization.Concurrency = concurrency;
+        settings.Authorization.MaxConcurrentBatches = maxConcurrentBatches;
 
         Assert.False(QueueConsumerDependencyInjectionExtensions.ValidateSettings(settings, out var error));
         Assert.Contains("Authorization", error);
-        Assert.Contains("Concurrency", error);
+        Assert.Contains("MaxConcurrentBatches", error);
+    }
+
+    [Fact]
+    public void NestedQueue_MaxBackoffBelowInitial_IsInvalid()
+    {
+        var settings = Valid();
+        settings.Authorization.EmptyQueueBackoff = TimeSpan.FromSeconds(10);
+        settings.Authorization.EmptyQueueMaxBackoff = TimeSpan.FromSeconds(5);
+
+        Assert.False(QueueConsumerDependencyInjectionExtensions.ValidateSettings(settings, out var error));
+        Assert.Contains("EmptyQueueMaxBackoff", error);
     }
 
     [Theory]
@@ -104,7 +115,7 @@ public class QueueConsumerSettingsValidationTests
     {
         var settings = Valid();
         settings.Authentication.Enabled = false;
-        settings.Authentication.Concurrency = 0;
+        settings.Authentication.MaxConcurrentBatches = 0;
         settings.Authentication.QueueName = string.Empty;
 
         Assert.True(QueueConsumerDependencyInjectionExtensions.ValidateSettings(settings, out var error), error);

@@ -1,6 +1,7 @@
 using Altinn.Auth.AuditLog.Configuration;
 using Altinn.Auth.AuditLog.Core.Queue;
 using Altinn.Auth.AuditLog.Queue;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using System.Diagnostics.Metrics;
@@ -28,6 +29,21 @@ public class QueueBatchConsumerTests
         Assert.Equal(3, queue.Deleted.Count);
         Assert.Empty(queue.Poisoned);
         Assert.Equal(0, sut.Circuit.ConsecutiveFailures);
+    }
+
+    [Fact]
+    public async Task ProcessBatch_ResolvesProcessorFromScopePerBatch()
+    {
+        var queue = new FakeRawQueue();
+        var processor = new FakeProcessor();
+        var scopes = 0;
+        var sut = CreateConsumer(queue, processor, onResolve: () => scopes++);
+
+        await sut.ProcessBatchAsync(Messages("a"), CancellationToken.None);
+        await sut.ProcessBatchAsync(Messages("b"), CancellationToken.None);
+
+        Assert.Equal(2, scopes);
+        Assert.Equal(2, processor.Batches.Count);
     }
 
     [Fact]
@@ -274,7 +290,23 @@ public class QueueBatchConsumerTests
     }
 
     [Fact]
-    public async Task Execute_DrainsQueueInBatches_AndStopsCleanly()
+    public async Task ProcessBatch_ReusesBuffers_BetweenBatches()
+    {
+        // The pooled buffer must be cleared between batches: the second batch must not see the first one's messages.
+        var queue = new FakeRawQueue();
+        var processor = new FakeProcessor();
+        var sut = CreateConsumer(queue, processor);
+
+        await sut.ProcessBatchAsync(Messages("a", "b"), CancellationToken.None);
+        await sut.ProcessBatchAsync(Messages("c"), CancellationToken.None);
+
+        Assert.Equal(2, processor.Batches.Count);
+        Assert.Equal(["c"], processor.Batches[1]);
+        Assert.Equal(3, queue.Deleted.Count);
+    }
+
+    [Fact]
+    public async Task Execute_DrainsQueueInBatches_WithBoundedConcurrency_AndStopsCleanly()
     {
         var queue = new FakeRawQueue();
         for (var i = 0; i < 70; i++)
@@ -282,12 +314,11 @@ public class QueueBatchConsumerTests
             queue.Pending.Enqueue(Message($"m{i}"));
         }
 
-        var processor = new FakeProcessor();
+        var processor = new FakeProcessor { Persist = async (_, ct) => await Task.Delay(5, ct) };
         var sut = CreateConsumer(queue, processor, s =>
         {
             s.BatchSize = 32;
-            s.Concurrency = 2;
-            s.EmptyQueueBackoff = TimeSpan.FromMilliseconds(5);
+            s.MaxConcurrentBatches = 2;
         });
 
         await sut.StartAsync(CancellationToken.None);
@@ -297,6 +328,7 @@ public class QueueBatchConsumerTests
         Assert.Equal(70, queue.Deleted.Count);
         Assert.All(processor.Batches, b => Assert.InRange(b.Count, 1, 32));
         Assert.Equal(70, processor.Batches.Sum(b => b.Count));
+        Assert.InRange(processor.MaxObservedConcurrency, 1, 2);
         Assert.True(sut.ExecuteTask!.IsCompletedSuccessfully);
     }
 
@@ -306,18 +338,36 @@ public class QueueBatchConsumerTests
         var queue = new FakeRawQueue { FailReceiveTimes = 2 };
         queue.Pending.Enqueue(Message("a"));
         var processor = new FakeProcessor();
-        var sut = CreateConsumer(queue, processor, s =>
-        {
-            s.Concurrency = 1;
-            s.ReceiveFailureBackoff = TimeSpan.FromMilliseconds(5);
-            s.EmptyQueueBackoff = TimeSpan.FromMilliseconds(5);
-        });
+        var sut = CreateConsumer(queue, processor);
 
         await sut.StartAsync(CancellationToken.None);
         await WaitUntil(() => queue.Deleted.Count == 1);
         await sut.StopAsync(CancellationToken.None);
 
         Assert.Single(processor.Batches);
+        Assert.Equal(3, queue.ReceiveCalls); // 2 failures + 1 success (further polls are empty)
+    }
+
+    [Fact]
+    public async Task Execute_Stop_WaitsForInFlightBatch()
+    {
+        var queue = new FakeRawQueue();
+        queue.Pending.Enqueue(Message("slow"));
+        var gate = new TaskCompletionSource();
+        var processor = new FakeProcessor { Persist = (_, _) => gate.Task };
+        var sut = CreateConsumer(queue, processor);
+
+        await sut.StartAsync(CancellationToken.None);
+        await WaitUntil(() => processor.Batches.Count == 1);
+
+        var stopping = sut.StopAsync(CancellationToken.None);
+        await Task.Delay(50);
+        Assert.False(stopping.IsCompleted); // in-flight batch is still running
+
+        gate.SetResult();
+        await stopping;
+
+        Assert.Single(queue.Deleted); // the batch completed and deleted its message during shutdown
     }
 
     private static async Task WaitUntil(Func<bool> condition)
@@ -330,27 +380,36 @@ public class QueueBatchConsumerTests
         }
     }
 
-    private static QueueBatchConsumer<string> CreateConsumer(FakeRawQueue queue, FakeProcessor processor, Action<QueueSettings>? configure = null)
+    private static QueueBatchConsumer<string> CreateConsumer(FakeRawQueue queue, FakeProcessor processor, Action<QueueSettings>? configure = null, Action? onResolve = null)
     {
         var settings = new QueueSettings
         {
             QueueName = queue.Name,
             BatchSize = 32,
-            Concurrency = 1,
+            MaxConcurrentBatches = 1,
             MaxDequeueCount = 5,
             TransientRetryAttempts = 3,
             TransientRetryBaseDelay = TimeSpan.FromMilliseconds(1),
             EmptyQueueBackoff = TimeSpan.FromMilliseconds(5),
+            EmptyQueueMaxBackoff = TimeSpan.FromMilliseconds(20),
             ReceiveFailureBackoff = TimeSpan.FromMilliseconds(5),
+            ReceiveFailureMaxBackoff = TimeSpan.FromMilliseconds(20),
             CircuitBreakFailuresBeforeOpen = 5,
             CircuitBreakOpenDuration = TimeSpan.FromSeconds(1),
             ShutdownGracePeriod = TimeSpan.FromSeconds(5),
         };
         configure?.Invoke(settings);
 
+        var services = new ServiceCollection();
+        services.AddScoped<IQueueEventProcessor<string>>(_ =>
+        {
+            onResolve?.Invoke();
+            return processor;
+        });
+
         return new QueueBatchConsumer<string>(
             queue,
-            processor,
+            services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
             settings,
             depthSampleInterval: TimeSpan.Zero,
             createQueuesIfNotExists: false,
@@ -363,21 +422,25 @@ public class QueueBatchConsumerTests
     private static RawQueueMessage[] Messages(params string[] bodies)
         => bodies.Select(b => Message(b)).ToArray();
 
+    private static RawQueueMessage Message(string body, long dequeueCount = 1)
+        => new(Guid.NewGuid().ToString("N"), "pop-" + Guid.NewGuid().ToString("N"), BinaryData.FromString(body), dequeueCount, DateTimeOffset.UtcNow);
+
     /// <summary>A foreign key violation: the database rejects the row because of its data.</summary>
     private static PostgresException DataError()
         => new("insert or update violates foreign key constraint", "ERROR", "ERROR", PostgresErrorCodes.ForeignKeyViolation);
-
-    private static RawQueueMessage Message(string body, long dequeueCount = 1)
-        => new(Guid.NewGuid().ToString("N"), "pop-" + Guid.NewGuid().ToString("N"), BinaryData.FromString(body), dequeueCount, DateTimeOffset.UtcNow);
 
     /// <summary>
     /// A processor over plain strings: bodies starting with "bad" are undecodable; persistence is pluggable.
     /// </summary>
     private sealed class FakeProcessor : IQueueEventProcessor<string>
     {
+        private int _inFlight;
+
         public List<IReadOnlyList<string>> Batches { get; } = [];
 
         public List<string> Decoded { get; } = [];
+
+        public int MaxObservedConcurrency { get; private set; }
 
         public Func<IReadOnlyList<string>, CancellationToken, Task> Persist { get; set; } = (_, _) => Task.CompletedTask;
 
@@ -399,14 +462,26 @@ public class QueueBatchConsumerTests
             return text;
         }
 
-        public Task PersistAsync(IReadOnlyList<string> events, CancellationToken cancellationToken)
+        public async Task PersistAsync(IReadOnlyList<string> events, CancellationToken cancellationToken)
         {
             lock (Batches)
             {
                 Batches.Add(events.ToArray());
+                _inFlight++;
+                MaxObservedConcurrency = Math.Max(MaxObservedConcurrency, _inFlight);
             }
 
-            return Persist(events, cancellationToken);
+            try
+            {
+                await Persist(events, cancellationToken);
+            }
+            finally
+            {
+                lock (Batches)
+                {
+                    _inFlight--;
+                }
+            }
         }
     }
 
@@ -428,25 +503,33 @@ public class QueueBatchConsumerTests
 
         public int FailReceiveTimes { get; set; }
 
+        public int ReceiveCalls { get; private set; }
+
         public Task EnsureExistsAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task<IReadOnlyList<RawQueueMessage>> ReceiveAsync(int maxMessages, TimeSpan visibilityTimeout, CancellationToken cancellationToken)
+        public Task<int> ReceiveAsync(int maxMessages, TimeSpan visibilityTimeout, List<RawQueueMessage> destination, CancellationToken cancellationToken)
         {
             lock (_lock)
             {
+                if (Pending.Count > 0 || FailReceiveTimes > 0)
+                {
+                    ReceiveCalls++;
+                }
+
                 if (FailReceiveTimes > 0)
                 {
                     FailReceiveTimes--;
                     throw new IOException("storage unavailable");
                 }
 
-                var result = new List<RawQueueMessage>(maxMessages);
-                while (result.Count < maxMessages && Pending.TryDequeue(out var message))
+                var received = 0;
+                while (received < maxMessages && Pending.TryDequeue(out var message))
                 {
-                    result.Add(message);
+                    destination.Add(message);
+                    received++;
                 }
 
-                return Task.FromResult<IReadOnlyList<RawQueueMessage>>(result);
+                return Task.FromResult(received);
             }
         }
 

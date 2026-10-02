@@ -81,7 +81,7 @@ public class QueueSettings
     /// The name of the queue to consume.
     /// </summary>
     [Required]
-    public string QueueName { get; set; } = string.Empty;
+    public required string QueueName { get; set; }
 
     /// <summary>
     /// The name of the poison queue. Defaults to <c>{QueueName}-poison</c>, which is the convention
@@ -96,11 +96,12 @@ public class QueueSettings
     public int BatchSize { get; set; } = MaxBatchSize;
 
     /// <summary>
-    /// Number of independent receive/persist loops per replica. Each loop owns one batch at a time,
-    /// so <c>Concurrency × BatchSize</c> is the number of rows in flight against the database per replica.
+    /// Maximum number of received batches being persisted concurrently per replica. The queue is polled by a
+    /// single loop; a new batch is only received when a processing slot is free, so
+    /// <c>MaxConcurrentBatches × BatchSize</c> is the number of rows in flight against the database per replica.
     /// </summary>
     [Range(1, 64)]
-    public int Concurrency { get; set; } = 4;
+    public int MaxConcurrentBatches { get; set; } = 4;
 
     /// <summary>
     /// How long a received message stays invisible to other consumers. Must comfortably exceed the
@@ -117,14 +118,26 @@ public class QueueSettings
     public int MaxDequeueCount { get; set; } = 5;
 
     /// <summary>
-    /// Delay before polling again when the queue is empty.
+    /// Initial delay before polling again when the queue is empty. Doubles on every consecutive empty poll up to
+    /// <see cref="EmptyQueueMaxBackoff"/>, and resets as soon as a message is received.
     /// </summary>
-    public TimeSpan EmptyQueueBackoff { get; set; } = TimeSpan.FromSeconds(2);
+    public TimeSpan EmptyQueueBackoff { get; set; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// Delay before polling again after a failed receive call.
+    /// Upper bound for the empty-queue backoff.
     /// </summary>
-    public TimeSpan ReceiveFailureBackoff { get; set; } = TimeSpan.FromSeconds(5);
+    public TimeSpan EmptyQueueMaxBackoff { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Initial delay before polling again after a failed receive call (or failed queue creation). Doubles on every
+    /// consecutive failure up to <see cref="ReceiveFailureMaxBackoff"/>.
+    /// </summary>
+    public TimeSpan ReceiveFailureBackoff { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Upper bound for the receive-failure backoff.
+    /// </summary>
+    public TimeSpan ReceiveFailureMaxBackoff { get; set; } = TimeSpan.FromMinutes(1);
 
     /// <summary>
     /// Number of in-process attempts to persist a batch when the failure is transient (DB unavailable,

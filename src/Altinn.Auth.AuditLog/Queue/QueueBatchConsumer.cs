@@ -1,5 +1,6 @@
 using Altinn.Auth.AuditLog.Configuration;
 using Altinn.Auth.AuditLog.Core.Queue;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace Altinn.Auth.AuditLog.Queue;
@@ -31,16 +32,24 @@ public enum BatchOutcome
 /// plus HTTP hop (see issue #335).
 /// </summary>
 /// <remarks>
+/// <para>
+/// A single loop polls the queue. Each received batch is handed to a processing task; at most
+/// <see cref="QueueSettings.MaxConcurrentBatches"/> batches are in flight, and the loop only polls again when a
+/// slot is free. The event-type specific work (<see cref="IQueueEventProcessor{TEvent}"/>) is resolved from a
+/// service scope created per batch.
+/// </para>
+/// <para>
 /// Delivery is at-least-once with batch granularity. Retry design:
+/// </para>
 /// <list type="bullet">
 ///   <item><b>Transient persist failure</b> (DB down, timeout, missing partition): roll back, retry in-process with
 ///   exponential backoff, then leave the messages on the queue; they reappear after the visibility timeout.
-///   Repeated transient failures open a circuit breaker that pauses receiving.</item>
+///   Repeated failures open a circuit breaker that pauses polling.</item>
 ///   <item><b>Data error of a single message</b> (undecodable, fails validation, rejected by a DB constraint): the message
 ///   is copied to the poison queue and deleted. A data error on a whole batch triggers per-message fallback to
 ///   find the offending message(s).</item>
 ///   <item><b>Systemic failure</b> (schema mismatch, insufficient privilege, unknown exception): nothing is poisoned;
-///   the messages stay on the queue and the circuit breaker pauses consumption.</item>
+///   the messages stay on the queue and the circuit breaker pauses polling.</item>
 ///   <item><b>Repeated failure</b>: a message dequeued more than <see cref="QueueSettings.MaxDequeueCount"/> times is poisoned
 ///   regardless of cause.</item>
 ///   <item><b>Failure after commit</b> (delete fails, pod killed): the message is redelivered and becomes a duplicate row;
@@ -48,10 +57,10 @@ public enum BatchOutcome
 /// </list>
 /// </remarks>
 /// <typeparam name="TEvent">The event type.</typeparam>
-public sealed class QueueBatchConsumer<TEvent> : BackgroundService
+public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
 {
     private readonly IRawQueue _queue;
-    private readonly IQueueEventProcessor<TEvent> _processor;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly QueueSettings _settings;
     private readonly TimeSpan _depthSampleInterval;
     private readonly bool _createQueuesIfNotExists;
@@ -60,11 +69,15 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly CircuitBreaker _circuit;
+    private readonly SemaphoreSlim _slots;
+    private readonly ConcurrentBag<BatchBuffer> _buffers = new();
+    private readonly ConcurrentDictionary<long, Task> _inFlight = new();
     private readonly CancellationTokenSource _gracefulCts = new();
+    private long _nextBatchId;
 
     public QueueBatchConsumer(
         IRawQueue queue,
-        IQueueEventProcessor<TEvent> processor,
+        IServiceScopeFactory scopeFactory,
         QueueSettings settings,
         TimeSpan depthSampleInterval,
         bool createQueuesIfNotExists,
@@ -73,8 +86,15 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
         TimeProvider timeProvider,
         ILogger<QueueBatchConsumer<TEvent>> logger)
     {
+        ArgumentNullException.ThrowIfNull(queue);
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentOutOfRangeException.ThrowIfLessThan(settings.MaxConcurrentBatches, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(settings.BatchSize, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(settings.BatchSize, QueueSettings.MaxBatchSize);
+
         _queue = queue;
-        _processor = processor;
+        _scopeFactory = scopeFactory;
         _settings = settings;
         _depthSampleInterval = depthSampleInterval;
         _createQueuesIfNotExists = createQueuesIfNotExists;
@@ -83,6 +103,7 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
         _timeProvider = timeProvider;
         _logger = logger;
         _circuit = new CircuitBreaker(settings.CircuitBreakFailuresBeforeOpen, settings.CircuitBreakOpenDuration, timeProvider);
+        _slots = new SemaphoreSlim(settings.MaxConcurrentBatches, settings.MaxConcurrentBatches);
     }
 
     /// <summary>
@@ -98,9 +119,9 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        QueueConsumerLog.ConsumerStarting(_logger, _queue.Name, _processor.Kind, _settings.Concurrency, _settings.BatchSize, _settings.VisibilityTimeout);
+        Log.ConsumerStarting(_logger, _queue.Name, _settings.MaxConcurrentBatches, _settings.BatchSize, _settings.VisibilityTimeout);
 
-        // Receiving stops immediately on shutdown, but an in-flight batch gets a grace period to commit and delete.
+        // Polling stops immediately on shutdown, but in-flight batches get a grace period to commit and delete.
         using var registration = stoppingToken.Register(() => _gracefulCts.CancelAfter(_settings.ShutdownGracePeriod));
 
         _health.Register(_queue.Name, _timeProvider.GetUtcNow());
@@ -113,15 +134,7 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
                 await EnsureQueuesAsync(stoppingToken);
             }
 
-            var tasks = new List<Task>(_settings.Concurrency + 1);
-            for (var i = 0; i < _settings.Concurrency; i++)
-            {
-                tasks.Add(RunWorkerAsync(i, stoppingToken));
-            }
-
-            tasks.Add(SampleDepthAsync(stoppingToken));
-
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(PollLoopAsync(stoppingToken), SampleDepthAsync(stoppingToken));
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
@@ -129,7 +142,8 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
         }
         finally
         {
-            QueueConsumerLog.ConsumerStopped(_logger, _queue.Name);
+            await Task.WhenAll(_inFlight.Values);
+            Log.ConsumerStopped(_logger, _queue.Name);
         }
     }
 
@@ -137,12 +151,15 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
     public override void Dispose()
     {
         _gracefulCts.Dispose();
+        _slots.Dispose();
         base.Dispose();
     }
 
     private async Task EnsureQueuesAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        var backoff = new Backoff(_settings.ReceiveFailureBackoff, _settings.ReceiveFailureMaxBackoff);
+
+        while (true)
         {
             try
             {
@@ -151,62 +168,106 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                QueueConsumerLog.EnsureQueueFailed(_logger, ex, _queue.Name, _settings.ReceiveFailureBackoff);
-                await Task.Delay(_settings.ReceiveFailureBackoff, _timeProvider, stoppingToken);
+                var delay = backoff.Next();
+                Log.EnsureQueueFailed(_logger, ex, _queue.Name, delay);
+                await Task.Delay(delay, _timeProvider, stoppingToken);
             }
         }
     }
 
-    private async Task RunWorkerAsync(int workerId, CancellationToken stoppingToken)
+    /// <summary>
+    /// The single poll loop: acquire a processing slot, receive a batch, hand it off, repeat.
+    /// </summary>
+    private async Task PollLoopAsync(CancellationToken stoppingToken)
     {
+        var emptyBackoff = new Backoff(_settings.EmptyQueueBackoff, _settings.EmptyQueueMaxBackoff);
+        var failureBackoff = new Backoff(_settings.ReceiveFailureBackoff, _settings.ReceiveFailureMaxBackoff);
+
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (_circuit.IsOpen(out var remaining))
+            {
+                await Task.Delay(remaining, _timeProvider, stoppingToken);
+                continue;
+            }
+
+            await _slots.WaitAsync(stoppingToken);
+            var buffer = RentBuffer();
+            int received;
+
             try
             {
-                if (_circuit.IsOpen(out var remaining))
-                {
-                    await Task.Delay(remaining, _timeProvider, stoppingToken);
-                    continue;
-                }
-
-                IReadOnlyList<RawQueueMessage> messages;
-                try
-                {
-                    messages = await _queue.ReceiveAsync(_settings.BatchSize, _settings.VisibilityTimeout, stoppingToken);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    _metrics.ReceiveFailed(_queue.Name);
-                    QueueConsumerLog.ReceiveFailed(_logger, ex, _queue.Name, _settings.ReceiveFailureBackoff);
-                    await Task.Delay(_settings.ReceiveFailureBackoff, _timeProvider, stoppingToken);
-                    continue;
-                }
-
-                _health.ReportReceive(_queue.Name, _timeProvider.GetUtcNow());
-
-                if (messages.Count == 0)
-                {
-                    await Task.Delay(_settings.EmptyQueueBackoff, _timeProvider, stoppingToken);
-                    continue;
-                }
-
-                await ProcessBatchAsync(messages, _gracefulCts.Token);
+                received = await _queue.ReceiveAsync(_settings.BatchSize, _settings.VisibilityTimeout, buffer.Messages, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
+                ReturnBuffer(buffer);
+                _slots.Release();
                 break;
             }
             catch (Exception ex)
             {
-                QueueConsumerLog.WorkerFailed(_logger, ex, workerId, _queue.Name, _settings.ReceiveFailureBackoff);
-                try
-                {
-                    await Task.Delay(_settings.ReceiveFailureBackoff, _timeProvider, stoppingToken);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
+                ReturnBuffer(buffer);
+                _slots.Release();
+                _metrics.ReceiveFailed(_queue.Name);
+                var delay = failureBackoff.Next();
+                Log.ReceiveFailed(_logger, ex, _queue.Name, delay);
+                await Task.Delay(delay, _timeProvider, stoppingToken);
+                continue;
+            }
+
+            failureBackoff.Reset();
+            _health.ReportReceive(_queue.Name, _timeProvider.GetUtcNow());
+
+            if (received == 0)
+            {
+                ReturnBuffer(buffer);
+                _slots.Release();
+                var delay = emptyBackoff.Next();
+                await Task.Delay(delay, _timeProvider, stoppingToken);
+                continue;
+            }
+
+            emptyBackoff.Reset();
+            StartBatch(buffer);
+        }
+    }
+
+    /// <summary>
+    /// Runs a batch on its own task. The slot and buffer are released when it completes, whatever the outcome.
+    /// </summary>
+    private void StartBatch(BatchBuffer buffer)
+    {
+        var id = Interlocked.Increment(ref _nextBatchId);
+        var task = RunAsync();
+        _inFlight[id] = task;
+
+        if (task.IsCompleted)
+        {
+            _inFlight.TryRemove(id, out _);
+        }
+
+        async Task RunAsync()
+        {
+            await Task.Yield();
+
+            try
+            {
+                await ProcessBatchCoreAsync(buffer, _gracefulCts.Token);
+            }
+            catch (OperationCanceledException) when (_gracefulCts.IsCancellationRequested)
+            {
+                // shutdown grace period elapsed; messages reappear after the visibility timeout
+            }
+            catch (Exception ex)
+            {
+                Log.BatchFailedUnexpectedly(_logger, ex, _queue.Name);
+            }
+            finally
+            {
+                ReturnBuffer(buffer);
+                _slots.Release();
+                _inFlight.TryRemove(id, out _);
             }
         }
     }
@@ -234,90 +295,98 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
             }
             catch (Exception ex)
             {
-                QueueConsumerLog.DepthSampleFailed(_logger, ex, _queue.Name);
+                Log.DepthSampleFailed(_logger, ex, _queue.Name);
             }
 
-            try
-            {
-                await Task.Delay(_depthSampleInterval, _timeProvider, stoppingToken);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
+            await Task.Delay(_depthSampleInterval, _timeProvider, stoppingToken);
         }
     }
 
     /// <summary>
-    /// Processes one received batch. Internal so it can be unit tested without the receive loop.
+    /// Processes one batch of already received messages. Exposed for tests; the poll loop uses the buffer directly.
     /// </summary>
     internal async Task<BatchOutcome> ProcessBatchAsync(IReadOnlyList<RawQueueMessage> messages, CancellationToken cancellationToken)
     {
+        var buffer = RentBuffer();
+        try
+        {
+            buffer.Messages.AddRange(messages);
+            return await ProcessBatchCoreAsync(buffer, cancellationToken);
+        }
+        finally
+        {
+            ReturnBuffer(buffer);
+        }
+    }
+
+    private async Task<BatchOutcome> ProcessBatchCoreAsync(BatchBuffer buffer, CancellationToken cancellationToken)
+    {
         var start = _timeProvider.GetTimestamp();
         var queue = _queue.Name;
+        var messages = buffer.Messages;
+        var accepted = buffer.Accepted;
+        var events = buffer.Events;
+
         _metrics.MessagesReceived(queue, messages.Count);
         RecordOldestMessageAge(messages);
 
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var processor = scope.ServiceProvider.GetRequiredService<IQueueEventProcessor<TEvent>>();
+
         // 1. Triage: poison messages that are permanently broken or have been retried too often.
-        var decoded = new List<(RawQueueMessage Message, TEvent Event)>(messages.Count);
         foreach (var message in messages)
         {
             if (message.DequeueCount > _settings.MaxDequeueCount)
             {
-                QueueConsumerLog.MaxDequeueCountExceeded(_logger, message.MessageId, queue, message.DequeueCount, _settings.MaxDequeueCount);
+                Log.MaxDequeueCountExceeded(_logger, message.MessageId, queue, message.DequeueCount, _settings.MaxDequeueCount);
                 await PoisonAsync(message, "max_dequeue_count_exceeded", cancellationToken);
                 continue;
             }
 
             try
             {
-                decoded.Add((message, _processor.Decode(message.Body.ToMemory())));
+                var @event = processor.Decode(message.Body.ToMemory());
+                accepted.Add(message);
+                events.Add(@event);
             }
             catch (MessageDecodeException ex)
             {
-                QueueConsumerLog.MessageUndecodable(_logger, ex, message.MessageId, queue, ex.Reason);
+                Log.MessageUndecodable(_logger, ex, message.MessageId, queue, ex.Reason);
                 await PoisonAsync(message, ex.Reason, cancellationToken);
             }
         }
 
-        if (decoded.Count == 0)
+        if (events.Count == 0)
         {
             return Complete(BatchOutcome.NothingToPersist, start);
         }
 
         // 2. Persist the whole batch in one transaction, retrying transient failures in-process.
-        var events = new TEvent[decoded.Count];
-        for (var i = 0; i < decoded.Count; i++)
-        {
-            events[i] = decoded[i].Event;
-        }
-
-        var result = await PersistWithRetryAsync(events, cancellationToken);
+        var result = await PersistWithRetryAsync(processor, events, cancellationToken);
         switch (result.Kind)
         {
             case PersistResultKind.Committed:
-                await DeleteAllAsync(decoded, cancellationToken);
+                await DeleteAllAsync(accepted, cancellationToken);
                 _circuit.RecordSuccess();
-                var outcome = Complete(BatchOutcome.Committed, start);
-                QueueConsumerLog.BatchCommitted(_logger, decoded.Count, queue, _timeProvider.GetElapsedTime(start));
-                return outcome;
+                Log.BatchCommitted(_logger, events.Count, queue, _timeProvider.GetElapsedTime(start));
+                return Complete(BatchOutcome.Committed, start);
 
             case PersistResultKind.Transient:
                 // Leave every message on the queue; it becomes visible again after the visibility timeout.
-                QueueConsumerLog.TransientPersistExhausted(_logger, result.Exception!, decoded.Count, queue);
-                RecordTransientFailure();
+                Log.TransientPersistExhausted(_logger, result.Exception!, events.Count, queue);
+                RecordFailure();
                 return Complete(BatchOutcome.TransientFailure, start);
 
             case PersistResultKind.DataError:
-                QueueConsumerLog.DataErrorBatchFailure(_logger, result.Exception!, decoded.Count, queue);
-                await FallbackPerMessageAsync(decoded, cancellationToken);
+                Log.DataErrorBatchFailure(_logger, result.Exception!, events.Count, queue);
+                await FallbackPerMessageAsync(processor, buffer, cancellationToken);
                 return Complete(BatchOutcome.FallbackPerMessage, start);
 
             case PersistResultKind.Systemic:
                 // Schema, privilege or programming error: every message would fail the same way. Poisoning would
                 // delete valid audit events from the source queue, so leave them and pause via the circuit breaker.
-                QueueConsumerLog.SystemicBatchFailure(_logger, result.Exception!, decoded.Count, queue);
-                RecordTransientFailure();
+                Log.SystemicBatchFailure(_logger, result.Exception!, events.Count, queue);
+                RecordFailure();
                 return Complete(BatchOutcome.SystemicFailure, start);
 
             default:
@@ -329,14 +398,21 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
     /// A batch was rejected because of message data: persist each message on its own so a single bad row does not
     /// block the others. Only a message that fails with a data error on its own is poisoned.
     /// </summary>
-    private async Task FallbackPerMessageAsync(List<(RawQueueMessage Message, TEvent Event)> decoded, CancellationToken cancellationToken)
+    private async Task FallbackPerMessageAsync(IQueueEventProcessor<TEvent> processor, BatchBuffer buffer, CancellationToken cancellationToken)
     {
+        var accepted = buffer.Accepted;
+        var events = buffer.Events;
+        var single = buffer.Single;
         var anyLeftOnQueue = false;
         var anyCommitted = false;
 
-        foreach (var (message, @event) in decoded)
+        for (var i = 0; i < accepted.Count; i++)
         {
-            var result = await PersistWithRetryAsync([@event], cancellationToken);
+            var message = accepted[i];
+            single.Clear();
+            single.Add(events[i]);
+
+            var result = await PersistWithRetryAsync(processor, single, cancellationToken);
             switch (result.Kind)
             {
                 case PersistResultKind.Committed:
@@ -345,12 +421,12 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
                     break;
 
                 case PersistResultKind.DataError:
-                    QueueConsumerLog.DataErrorMessageFailure(_logger, result.Exception!, message.MessageId, _queue.Name);
+                    Log.DataErrorMessageFailure(_logger, result.Exception!, message.MessageId, _queue.Name);
                     await PoisonAsync(message, "persist_failed", cancellationToken);
                     break;
 
                 case PersistResultKind.Systemic:
-                    QueueConsumerLog.SystemicBatchFailure(_logger, result.Exception!, 1, _queue.Name);
+                    Log.SystemicBatchFailure(_logger, result.Exception!, 1, _queue.Name);
                     anyLeftOnQueue = true;
                     break;
 
@@ -363,7 +439,7 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
 
         if (anyLeftOnQueue)
         {
-            RecordTransientFailure();
+            RecordFailure();
         }
         else if (anyCommitted)
         {
@@ -371,16 +447,21 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
         }
     }
 
-    private async Task<PersistResult> PersistWithRetryAsync(IReadOnlyList<TEvent> events, CancellationToken cancellationToken)
+    /// <summary>
+    /// In-process retries exist because every queue-level retry costs a dequeue count (towards
+    /// <see cref="QueueSettings.MaxDequeueCount"/>) and a full visibility timeout. A few quick attempts absorb
+    /// sub-second blips without touching either.
+    /// </summary>
+    private async Task<PersistResult> PersistWithRetryAsync(IQueueEventProcessor<TEvent> processor, IReadOnlyList<TEvent> events, CancellationToken cancellationToken)
     {
-        var attempts = Math.Max(1, _settings.TransientRetryAttempts);
+        var attempts = _settings.TransientRetryAttempts;
         Exception? last = null;
 
         for (var attempt = 1; attempt <= attempts; attempt++)
         {
             try
             {
-                await _processor.PersistAsync(events, cancellationToken);
+                await processor.PersistAsync(events, cancellationToken);
                 _metrics.MessagesPersisted(_queue.Name, events.Count);
                 return PersistResult.Committed;
             }
@@ -402,8 +483,8 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
                 last = ex;
                 if (attempt < attempts)
                 {
-                    var delay = BackoffDelay(attempt);
-                    QueueConsumerLog.TransientPersistFailure(_logger, ex, events.Count, _queue.Name, attempt, attempts, delay);
+                    var delay = TransientRetryDelay(attempt);
+                    Log.TransientPersistFailure(_logger, ex, events.Count, _queue.Name, attempt, attempts, delay);
                     await Task.Delay(delay, _timeProvider, cancellationToken);
                 }
             }
@@ -412,7 +493,10 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
         return PersistResult.Transient(last!);
     }
 
-    private TimeSpan BackoffDelay(int attempt)
+    /// <summary>
+    /// Exponential backoff with 0-20 % jitter: base, 2×base, 4×base, ...
+    /// </summary>
+    private TimeSpan TransientRetryDelay(int attempt)
     {
         var baseDelay = _settings.TransientRetryBaseDelay;
         if (baseDelay <= TimeSpan.Zero)
@@ -420,26 +504,26 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
             return TimeSpan.Zero;
         }
 
-        var factor = Math.Pow(2, attempt - 1);
-        var jitter = 1 + (Random.Shared.NextDouble() * 0.2); // 0-20 % jitter
+        var factor = 1 << (attempt - 1);
+        var jitter = 1 + (Random.Shared.NextDouble() * 0.2);
         return TimeSpan.FromMilliseconds(baseDelay.TotalMilliseconds * factor * jitter);
     }
 
-    private void RecordTransientFailure()
+    private void RecordFailure()
     {
         if (_circuit.RecordFailure())
         {
             _metrics.CircuitOpened(_queue.Name);
-            QueueConsumerLog.CircuitOpened(_logger, _queue.Name, _settings.CircuitBreakOpenDuration);
+            Log.CircuitOpened(_logger, _queue.Name, _settings.CircuitBreakOpenDuration);
         }
     }
 
-    private async Task DeleteAllAsync(List<(RawQueueMessage Message, TEvent Event)> decoded, CancellationToken cancellationToken)
+    private async Task DeleteAllAsync(List<RawQueueMessage> messages, CancellationToken cancellationToken)
     {
-        var deletes = new Task[decoded.Count];
-        for (var i = 0; i < decoded.Count; i++)
+        var deletes = new Task[messages.Count];
+        for (var i = 0; i < messages.Count; i++)
         {
-            deletes[i] = DeleteAsync(decoded[i].Message, cancellationToken);
+            deletes[i] = DeleteAsync(messages[i], cancellationToken);
         }
 
         await Task.WhenAll(deletes);
@@ -459,7 +543,7 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
         {
             // Already committed: the message will be redelivered and produce a duplicate row.
             _metrics.DeleteFailed(_queue.Name);
-            QueueConsumerLog.DeleteFailed(_logger, ex, message.MessageId, _queue.Name);
+            Log.DeleteFailed(_logger, ex, message.MessageId, _queue.Name);
         }
     }
 
@@ -470,7 +554,7 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
             await _queue.SendToPoisonAsync(message, cancellationToken);
             await _queue.DeleteAsync(message, cancellationToken);
             _metrics.MessagePoisoned(_queue.Name, reason);
-            QueueConsumerLog.MessagePoisoned(_logger, message.MessageId, _queue.Name, reason);
+            Log.MessagePoisoned(_logger, message.MessageId, _queue.Name, reason);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -480,11 +564,11 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
         {
             // Not deleted from the source queue: it comes back and we try to poison it again.
             _metrics.PoisonFailed(_queue.Name);
-            QueueConsumerLog.PoisonFailed(_logger, ex, message.MessageId, _queue.Name);
+            Log.PoisonFailed(_logger, ex, message.MessageId, _queue.Name);
         }
     }
 
-    private void RecordOldestMessageAge(IReadOnlyList<RawQueueMessage> messages)
+    private void RecordOldestMessageAge(List<RawQueueMessage> messages)
     {
         DateTimeOffset? oldest = null;
         foreach (var message in messages)
@@ -518,6 +602,57 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
             _ => "unknown",
         };
 
+    private BatchBuffer RentBuffer()
+        => _buffers.TryTake(out var buffer) ? buffer : new BatchBuffer(_settings.BatchSize);
+
+    private void ReturnBuffer(BatchBuffer buffer)
+    {
+        buffer.Clear();
+        _buffers.Add(buffer);
+    }
+
+    /// <summary>
+    /// Reusable per-batch storage: received messages, the subset that decoded, their events, and a one-element
+    /// list for per-message fallback. Pooled so steady-state batches do not allocate.
+    /// </summary>
+    private sealed class BatchBuffer(int capacity)
+    {
+        public List<RawQueueMessage> Messages { get; } = new(capacity);
+
+        public List<RawQueueMessage> Accepted { get; } = new(capacity);
+
+        public List<TEvent> Events { get; } = new(capacity);
+
+        public List<TEvent> Single { get; } = new(1);
+
+        public void Clear()
+        {
+            Messages.Clear();
+            Accepted.Clear();
+            Events.Clear();
+            Single.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Doubling backoff capped at a maximum; reset when the operation succeeds.
+    /// </summary>
+    private sealed class Backoff(TimeSpan initial, TimeSpan max)
+    {
+        private TimeSpan _next = initial;
+
+        public TimeSpan Next()
+        {
+            var delay = _next;
+            var doubled = delay + delay;
+            _next = doubled > max || doubled < delay ? max : doubled;
+            return delay;
+        }
+
+        public void Reset()
+            => _next = initial;
+    }
+
     private enum PersistResultKind
     {
         Committed,
@@ -535,5 +670,62 @@ public sealed class QueueBatchConsumer<TEvent> : BackgroundService
         public static PersistResult DataError(Exception exception) => new(PersistResultKind.DataError, exception);
 
         public static PersistResult Systemic(Exception exception) => new(PersistResultKind.Systemic, exception);
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(1, LogLevel.Information, "Queue consumer for '{Queue}' starting with up to {MaxConcurrentBatches} concurrent batch(es), batch size {BatchSize}, visibility timeout {VisibilityTimeout}")]
+        public static partial void ConsumerStarting(ILogger logger, string queue, int maxConcurrentBatches, int batchSize, TimeSpan visibilityTimeout);
+
+        [LoggerMessage(2, LogLevel.Information, "Queue consumer for '{Queue}' stopped")]
+        public static partial void ConsumerStopped(ILogger logger, string queue);
+
+        [LoggerMessage(3, LogLevel.Warning, "Could not ensure queue '{Queue}' and its poison queue exist; retrying in {Delay}")]
+        public static partial void EnsureQueueFailed(ILogger logger, Exception exception, string queue, TimeSpan delay);
+
+        [LoggerMessage(4, LogLevel.Warning, "Receive from queue '{Queue}' failed; backing off {Delay}")]
+        public static partial void ReceiveFailed(ILogger logger, Exception exception, string queue, TimeSpan delay);
+
+        [LoggerMessage(5, LogLevel.Error, "Batch from queue '{Queue}' failed unexpectedly; its messages are left on the queue")]
+        public static partial void BatchFailedUnexpectedly(ILogger logger, Exception exception, string queue);
+
+        [LoggerMessage(6, LogLevel.Warning, "Message {MessageId} on queue '{Queue}' could not be decoded ({Reason}); moving to poison queue")]
+        public static partial void MessageUndecodable(ILogger logger, Exception exception, string messageId, string queue, string reason);
+
+        [LoggerMessage(7, LogLevel.Warning, "Message {MessageId} on queue '{Queue}' has been dequeued {DequeueCount} times (max {MaxDequeueCount}); moving to poison queue")]
+        public static partial void MaxDequeueCountExceeded(ILogger logger, string messageId, string queue, long dequeueCount, int maxDequeueCount);
+
+        [LoggerMessage(8, LogLevel.Error, "Message {MessageId} on queue '{Queue}' moved to poison queue ({Reason})")]
+        public static partial void MessagePoisoned(ILogger logger, string messageId, string queue, string reason);
+
+        [LoggerMessage(9, LogLevel.Error, "Failed to move message {MessageId} on queue '{Queue}' to the poison queue; it stays on the queue and will be redelivered")]
+        public static partial void PoisonFailed(ILogger logger, Exception exception, string messageId, string queue);
+
+        [LoggerMessage(10, LogLevel.Warning, "Transient failure persisting batch of {BatchSize} from queue '{Queue}' (attempt {Attempt}/{MaxAttempts}); retrying in {Delay}")]
+        public static partial void TransientPersistFailure(ILogger logger, Exception exception, int batchSize, string queue, int attempt, int maxAttempts, TimeSpan delay);
+
+        [LoggerMessage(11, LogLevel.Error, "Transient failures exhausted for batch of {BatchSize} from queue '{Queue}'; messages left on the queue and become visible again after the visibility timeout")]
+        public static partial void TransientPersistExhausted(ILogger logger, Exception exception, int batchSize, string queue);
+
+        [LoggerMessage(12, LogLevel.Error, "Batch of {BatchSize} from queue '{Queue}' was rejected because of message data; falling back to per-message processing to isolate the offending message(s)")]
+        public static partial void DataErrorBatchFailure(ILogger logger, Exception exception, int batchSize, string queue);
+
+        [LoggerMessage(13, LogLevel.Error, "Message {MessageId} on queue '{Queue}' was rejected because of its data when persisted on its own; moving to poison queue")]
+        public static partial void DataErrorMessageFailure(ILogger logger, Exception exception, string messageId, string queue);
+
+        [LoggerMessage(14, LogLevel.Warning, "Message {MessageId} on queue '{Queue}' was committed to the database but could not be deleted from the queue; it will be redelivered (duplicate)")]
+        public static partial void DeleteFailed(ILogger logger, Exception exception, string messageId, string queue);
+
+        [LoggerMessage(15, LogLevel.Error, "Circuit opened for queue '{Queue}' after repeated failures; pausing polling for {Duration}")]
+        public static partial void CircuitOpened(ILogger logger, string queue, TimeSpan duration);
+
+        [LoggerMessage(16, LogLevel.Debug, "Batch of {BatchSize} from queue '{Queue}' committed and deleted in {Duration}")]
+        public static partial void BatchCommitted(ILogger logger, int batchSize, string queue, TimeSpan duration);
+
+        [LoggerMessage(17, LogLevel.Debug, "Could not sample depth of queue '{Queue}'")]
+        public static partial void DepthSampleFailed(ILogger logger, Exception exception, string queue);
+
+        [LoggerMessage(18, LogLevel.Critical, "Systemic failure persisting batch of {BatchSize} from queue '{Queue}' (schema, privileges or configuration); nothing poisoned, messages left on the queue, pausing polling via circuit breaker")]
+        public static partial void SystemicBatchFailure(ILogger logger, Exception exception, int batchSize, string queue);
     }
 }

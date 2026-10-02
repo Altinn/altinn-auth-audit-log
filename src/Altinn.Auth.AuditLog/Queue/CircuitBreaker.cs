@@ -1,9 +1,9 @@
 namespace Altinn.Auth.AuditLog.Queue;
 
 /// <summary>
-/// Minimal circuit breaker shared by all worker loops of one consumer. After a number of consecutive
-/// transient batch failures the circuit opens and receiving pauses, so a database outage does not
-/// burn through the dequeue count of the whole backlog.
+/// Minimal circuit breaker for one consumer. After a number of consecutive transient/systemic batch failures the
+/// circuit opens and receiving pauses, so a database outage does not burn through the dequeue count of the whole
+/// backlog.
 /// </summary>
 internal sealed class CircuitBreaker
 {
@@ -17,13 +17,17 @@ internal sealed class CircuitBreaker
 
     public CircuitBreaker(int failuresBeforeOpen, TimeSpan openDuration, TimeProvider timeProvider)
     {
-        _failuresBeforeOpen = Math.Max(1, failuresBeforeOpen);
+        ArgumentOutOfRangeException.ThrowIfLessThan(failuresBeforeOpen, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(openDuration, TimeSpan.Zero);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        _failuresBeforeOpen = failuresBeforeOpen;
         _openDuration = openDuration;
         _timeProvider = timeProvider;
     }
 
     /// <summary>
-    /// Gets the number of consecutive transient failures recorded since the last success.
+    /// Gets the number of consecutive failures recorded since the last success.
     /// </summary>
     public int ConsecutiveFailures
     {
@@ -41,18 +45,22 @@ internal sealed class CircuitBreaker
     /// </summary>
     public bool IsOpen(out TimeSpan remaining)
     {
+        var now = _timeProvider.GetUtcNow();
+        DateTimeOffset openUntil;
+
         lock (_lock)
         {
-            var now = _timeProvider.GetUtcNow();
-            if (now < _openUntil)
-            {
-                remaining = _openUntil - now;
-                return true;
-            }
-
-            remaining = TimeSpan.Zero;
-            return false;
+            openUntil = _openUntil;
         }
+
+        if (now < openUntil)
+        {
+            remaining = openUntil - now;
+            return true;
+        }
+
+        remaining = TimeSpan.Zero;
+        return false;
     }
 
     /// <summary>
@@ -68,21 +76,22 @@ internal sealed class CircuitBreaker
     }
 
     /// <summary>
-    /// Records a transient batch failure. Returns <see langword="true"/> if this failure opened the circuit.
+    /// Records a failed batch. Returns <see langword="true"/> if this failure opened the circuit.
     /// </summary>
     public bool RecordFailure()
     {
+        var openUntil = _timeProvider.GetUtcNow() + _openDuration;
+
         lock (_lock)
         {
-            _consecutiveFailures++;
-            if (_consecutiveFailures >= _failuresBeforeOpen)
+            if (++_consecutiveFailures < _failuresBeforeOpen)
             {
-                _openUntil = _timeProvider.GetUtcNow() + _openDuration;
-                _consecutiveFailures = 0;
-                return true;
+                return false;
             }
 
-            return false;
+            _openUntil = openUntil;
+            _consecutiveFailures = 0;
+            return true;
         }
     }
 }

@@ -53,8 +53,9 @@ public static class QueueConsumerDependencyInjectionExtensions
             clients.UseCredential(new DefaultAzureCredential());
         });
 
-        builder.Services.TryAddSingleton<IQueueEventProcessor<AuthorizationEvent>, AuthorizationQueueEventProcessor>();
-        builder.Services.TryAddSingleton<IQueueEventProcessor<AuthenticationEvent>, AuthenticationQueueEventProcessor>();
+        // Resolved from a service scope created per batch, so processors (and what they depend on) may be scoped.
+        builder.Services.TryAddScoped<IQueueEventProcessor<AuthorizationEvent>, AuthorizationQueueEventProcessor>();
+        builder.Services.TryAddScoped<IQueueEventProcessor<AuthenticationEvent>, AuthenticationQueueEventProcessor>();
 
         if (settings.Authorization.Enabled)
         {
@@ -82,7 +83,7 @@ public static class QueueConsumerDependencyInjectionExtensions
 
             return new QueueBatchConsumer<TEvent>(
                 queue,
-                sp.GetRequiredService<IQueueEventProcessor<TEvent>>(),
+                sp.GetRequiredService<IServiceScopeFactory>(),
                 queueSettings,
                 all.DepthSampleInterval,
                 all.CreateQueuesIfNotExists,
@@ -171,6 +172,18 @@ public static class QueueConsumerDependencyInjectionExtensions
         if (queue.TransientRetryBaseDelay < TimeSpan.Zero)
         {
             error = $"{name}: TransientRetryBaseDelay must not be negative";
+            return false;
+        }
+
+        if (queue.EmptyQueueMaxBackoff < queue.EmptyQueueBackoff)
+        {
+            error = $"{name}: EmptyQueueMaxBackoff must be at least EmptyQueueBackoff";
+            return false;
+        }
+
+        if (queue.ReceiveFailureMaxBackoff < queue.ReceiveFailureBackoff)
+        {
+            error = $"{name}: ReceiveFailureMaxBackoff must be at least ReceiveFailureBackoff";
             return false;
         }
 

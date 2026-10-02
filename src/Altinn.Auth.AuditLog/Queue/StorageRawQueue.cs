@@ -42,22 +42,15 @@ internal sealed class StorageRawQueue : IRawQueue
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<RawQueueMessage>> ReceiveAsync(int maxMessages, TimeSpan visibilityTimeout, CancellationToken cancellationToken)
+    public async Task<int> ReceiveAsync(int maxMessages, TimeSpan visibilityTimeout, List<RawQueueMessage> destination, CancellationToken cancellationToken)
     {
         QueueMessage[] messages = await _queue.ReceiveMessagesAsync(maxMessages, visibilityTimeout, cancellationToken);
-        if (messages.Length == 0)
+        foreach (var message in messages)
         {
-            return [];
+            destination.Add(new RawQueueMessage(message.MessageId, message.PopReceipt, message.Body, message.DequeueCount, message.InsertedOn));
         }
 
-        var result = new RawQueueMessage[messages.Length];
-        for (var i = 0; i < messages.Length; i++)
-        {
-            var message = messages[i];
-            result[i] = new RawQueueMessage(message.MessageId, message.PopReceipt, message.Body, message.DequeueCount, message.InsertedOn);
-        }
-
-        return result;
+        return messages.Length;
     }
 
     /// <inheritdoc/>

@@ -1,5 +1,6 @@
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Repositories.Interfaces;
+using Altinn.Auth.AuditLog.Persistence.Extensions;
 using Altinn.Authorization.ServiceDefaults.Npgsql;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -239,38 +240,30 @@ namespace Altinn.Auth.AuditLog.Persistence
                 traceId[i] = NullIfEmpty(authorizationEvent.TraceId);
             }
 
-            try
-            {
-                await using NpgsqlConnection pgcon = await _dataSource.OpenConnectionAsync(cancellationToken);
-                await using NpgsqlCommand pgcom = pgcon.CreateCommand(INSERTAUTHZEVENTS);
+            await using NpgsqlConnection pgcon = await _dataSource.OpenConnectionAsync(cancellationToken);
+            await using NpgsqlCommand pgcom = pgcon.CreateCommand(INSERTAUTHZEVENTS);
 
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("sessionid", sessionId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<DateTime[]>("created", created) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.TimestampTz });
-                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("subjectuserid", subjectUserId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("subjectorgcode", subjectOrgCode) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("subjectorgnumber", subjectOrgNumber) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
-                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("subjectparty", subjectParty) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
-                pgcom.Parameters.Add(new NpgsqlParameter<int?[]>("resourcepartyid", resourcePartyId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("resource", resource) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("instanceid", instanceId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("operation", operation) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("ipaddress", ipAddress) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<string[]>("contextrequestjson", contextRequestJson) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Jsonb });
-                pgcom.Parameters.Add(new NpgsqlParameter<int[]>("decision", decision) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Integer });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("subjectpartyuuid", subjectPartyUuid) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
-                pgcom.Parameters.Add(new NpgsqlParameter<string?[]>("trace_id", traceId) { NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+            pgcom.Parameters.Add<string?[]>("sessionid", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = sessionId;
+            pgcom.Parameters.Add<DateTime[]>("created", NpgsqlDbType.Array | NpgsqlDbType.TimestampTz).TypedValue = created;
+            pgcom.Parameters.Add<int?[]>("subjectuserid", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = subjectUserId;
+            pgcom.Parameters.Add<string?[]>("subjectorgcode", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = subjectOrgCode;
+            pgcom.Parameters.Add<int?[]>("subjectorgnumber", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = subjectOrgNumber;
+            pgcom.Parameters.Add<int?[]>("subjectparty", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = subjectParty;
+            pgcom.Parameters.Add<int?[]>("resourcepartyid", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = resourcePartyId;
+            pgcom.Parameters.Add<string?[]>("resource", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = resource;
+            pgcom.Parameters.Add<string?[]>("instanceid", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = instanceId;
+            pgcom.Parameters.Add<string?[]>("operation", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = operation;
+            pgcom.Parameters.Add<string?[]>("ipaddress", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = ipAddress;
+            pgcom.Parameters.Add<string[]>("contextrequestjson", NpgsqlDbType.Array | NpgsqlDbType.Jsonb).TypedValue = contextRequestJson;
+            pgcom.Parameters.Add<int[]>("decision", NpgsqlDbType.Array | NpgsqlDbType.Integer).TypedValue = decision;
+            pgcom.Parameters.Add<string?[]>("subjectpartyuuid", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = subjectPartyUuid;
+            pgcom.Parameters.Add<string?[]>("trace_id", NpgsqlDbType.Array | NpgsqlDbType.Text).TypedValue = traceId;
 
-                await pgcom.PrepareAsync(cancellationToken);
-                var inserted = await pgcom.ExecuteNonQueryAsync(cancellationToken);
-                if (inserted != count)
-                {
-                    throw new InvalidOperationException($"Expected to insert {count} authorization events, but {inserted} rows were affected");
-                }
-            }
-            catch (Exception e)
+            await pgcom.PrepareAsync(cancellationToken);
+            var inserted = await pgcom.ExecuteNonQueryAsync(cancellationToken);
+            if (inserted != count)
             {
-                _logger.LogError(e, "AuditLog // AuthorizationEventRepository // InsertAuthorizationEvents // Exception (batch size {BatchSize})", count);
-                throw;
+                throw new InvalidOperationException($"Expected to insert {count} authorization events, but {inserted} rows were affected");
             }
         }
 
