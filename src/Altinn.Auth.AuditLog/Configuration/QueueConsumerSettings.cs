@@ -96,14 +96,6 @@ public class QueueSettings
     public int BatchSize { get; set; } = MaxBatchSize;
 
     /// <summary>
-    /// Maximum number of received batches being persisted concurrently per replica. The queue is polled by a
-    /// single loop; a new batch is only received when a processing slot is free, so
-    /// <c>MaxConcurrentBatches × BatchSize</c> is the number of rows in flight against the database per replica.
-    /// </summary>
-    [Range(1, 64)]
-    public int MaxConcurrentBatches { get; set; } = 4;
-
-    /// <summary>
     /// How long a received message stays invisible to other consumers. Must comfortably exceed the
     /// worst-case time to persist a batch including transient retries; a message whose visibility
     /// expires before it is deleted will be delivered again (duplicate).

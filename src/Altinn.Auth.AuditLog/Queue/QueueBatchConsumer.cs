@@ -1,6 +1,5 @@
 using Altinn.Auth.AuditLog.Configuration;
 using Altinn.Auth.AuditLog.Core.Queue;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace Altinn.Auth.AuditLog.Queue;
@@ -33,9 +32,9 @@ public enum BatchOutcome
 /// </summary>
 /// <remarks>
 /// <para>
-/// A single loop polls the queue. Each received batch is handed to a processing task; at most
-/// <see cref="QueueSettings.MaxConcurrentBatches"/> batches are in flight, and the loop only polls again when a
-/// slot is free. The event-type specific work (<see cref="IQueueEventProcessor{TEvent}"/>) is resolved from a
+/// A single sequential loop per queue: receive a batch, process it to completion, repeat. There is no
+/// in-process parallelism; throughput scales with the number of replicas, each of which leases its own
+/// messages. The event-type specific work (<see cref="IQueueEventProcessor{TEvent}"/>) is resolved from a
 /// service scope created per batch.
 /// </para>
 /// <para>
@@ -69,11 +68,8 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly CircuitBreaker _circuit;
-    private readonly SemaphoreSlim _slots;
-    private readonly ConcurrentBag<BatchBuffer> _buffers = new();
-    private readonly ConcurrentDictionary<long, Task> _inFlight = new();
+    private readonly BatchBuffer _buffer;
     private readonly CancellationTokenSource _gracefulCts = new();
-    private long _nextBatchId;
 
     public QueueBatchConsumer(
         IRawQueue queue,
@@ -89,7 +85,6 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
         ArgumentNullException.ThrowIfNull(queue);
         ArgumentNullException.ThrowIfNull(scopeFactory);
         ArgumentNullException.ThrowIfNull(settings);
-        ArgumentOutOfRangeException.ThrowIfLessThan(settings.MaxConcurrentBatches, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(settings.BatchSize, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(settings.BatchSize, QueueSettings.MaxBatchSize);
 
@@ -103,7 +98,7 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
         _timeProvider = timeProvider;
         _logger = logger;
         _circuit = new CircuitBreaker(settings.CircuitBreakFailuresBeforeOpen, settings.CircuitBreakOpenDuration, timeProvider);
-        _slots = new SemaphoreSlim(settings.MaxConcurrentBatches, settings.MaxConcurrentBatches);
+        _buffer = new BatchBuffer(settings.BatchSize);
     }
 
     /// <summary>
@@ -119,7 +114,7 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        Log.ConsumerStarting(_logger, _queue.Name, _settings.MaxConcurrentBatches, _settings.BatchSize, _settings.VisibilityTimeout);
+        Log.ConsumerStarting(_logger, _queue.Name, _settings.BatchSize, _settings.VisibilityTimeout);
 
         // Polling stops immediately on shutdown, but in-flight batches get a grace period to commit and delete.
         using var registration = stoppingToken.Register(() => _gracefulCts.CancelAfter(_settings.ShutdownGracePeriod));
@@ -142,7 +137,6 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
         }
         finally
         {
-            await Task.WhenAll(_inFlight.Values);
             Log.ConsumerStopped(_logger, _queue.Name);
         }
     }
@@ -151,7 +145,6 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
     public override void Dispose()
     {
         _gracefulCts.Dispose();
-        _slots.Dispose();
         base.Dispose();
     }
 
@@ -176,7 +169,8 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
     }
 
     /// <summary>
-    /// The single poll loop: acquire a processing slot, receive a batch, hand it off, repeat.
+    /// The poll loop: receive a batch, process it to completion, repeat. Strictly sequential, so the single
+    /// <see cref="BatchBuffer"/> can be reused for every batch.
     /// </summary>
     private async Task PollLoopAsync(CancellationToken stoppingToken)
     {
@@ -191,24 +185,15 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
                 continue;
             }
 
-            await _slots.WaitAsync(stoppingToken);
-            var buffer = RentBuffer();
+            _buffer.Clear();
             int received;
 
             try
             {
-                received = await _queue.ReceiveAsync(_settings.BatchSize, _settings.VisibilityTimeout, buffer.Messages, stoppingToken);
+                received = await _queue.ReceiveAsync(_settings.BatchSize, _settings.VisibilityTimeout, _buffer.Messages, stoppingToken);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (Exception ex) when (ex is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
             {
-                ReturnBuffer(buffer);
-                _slots.Release();
-                break;
-            }
-            catch (Exception ex)
-            {
-                ReturnBuffer(buffer);
-                _slots.Release();
                 _metrics.ReceiveFailed(_queue.Name);
                 var delay = failureBackoff.Next();
                 Log.ReceiveFailed(_logger, ex, _queue.Name, delay);
@@ -221,53 +206,26 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
 
             if (received == 0)
             {
-                ReturnBuffer(buffer);
-                _slots.Release();
                 var delay = emptyBackoff.Next();
                 await Task.Delay(delay, _timeProvider, stoppingToken);
                 continue;
             }
 
             emptyBackoff.Reset();
-            StartBatch(buffer);
-        }
-    }
-
-    /// <summary>
-    /// Runs a batch on its own task. The slot and buffer are released when it completes, whatever the outcome.
-    /// </summary>
-    private void StartBatch(BatchBuffer buffer)
-    {
-        var id = Interlocked.Increment(ref _nextBatchId);
-        var task = RunAsync();
-        _inFlight[id] = task;
-
-        if (task.IsCompleted)
-        {
-            _inFlight.TryRemove(id, out _);
-        }
-
-        async Task RunAsync()
-        {
-            await Task.Yield();
 
             try
             {
-                await ProcessBatchCoreAsync(buffer, _gracefulCts.Token);
+                // Uses the graceful token: on shutdown the batch in progress gets ShutdownGracePeriod to commit and delete.
+                await ProcessBatchCoreAsync(_buffer, _gracefulCts.Token);
             }
             catch (OperationCanceledException) when (_gracefulCts.IsCancellationRequested)
             {
-                // shutdown grace period elapsed; messages reappear after the visibility timeout
+                // Grace period elapsed; the messages reappear after the visibility timeout.
+                break;
             }
             catch (Exception ex)
             {
                 Log.BatchFailedUnexpectedly(_logger, ex, _queue.Name);
-            }
-            finally
-            {
-                ReturnBuffer(buffer);
-                _slots.Release();
-                _inFlight.TryRemove(id, out _);
             }
         }
     }
@@ -303,20 +261,14 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
     }
 
     /// <summary>
-    /// Processes one batch of already received messages. Exposed for tests; the poll loop uses the buffer directly.
+    /// Processes one batch of already received messages. Exposed for tests; the poll loop fills the buffer directly.
+    /// Not safe to call while the poll loop is running (they share the single buffer).
     /// </summary>
-    internal async Task<BatchOutcome> ProcessBatchAsync(IReadOnlyList<RawQueueMessage> messages, CancellationToken cancellationToken)
+    internal Task<BatchOutcome> ProcessBatchAsync(IReadOnlyList<RawQueueMessage> messages, CancellationToken cancellationToken)
     {
-        var buffer = RentBuffer();
-        try
-        {
-            buffer.Messages.AddRange(messages);
-            return await ProcessBatchCoreAsync(buffer, cancellationToken);
-        }
-        finally
-        {
-            ReturnBuffer(buffer);
-        }
+        _buffer.Clear();
+        _buffer.Messages.AddRange(messages);
+        return ProcessBatchCoreAsync(_buffer, cancellationToken);
     }
 
     private async Task<BatchOutcome> ProcessBatchCoreAsync(BatchBuffer buffer, CancellationToken cancellationToken)
@@ -345,9 +297,9 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
 
             try
             {
-                var @event = processor.Decode(message.Body.ToMemory().Span);
+                var evt = processor.Decode(message.Body.ToMemory().Span);
                 accepted.Add(message);
-                events.Add(@event);
+                events.Add(evt);
             }
             catch (MessageDecodeException ex)
             {
@@ -602,18 +554,10 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
             _ => "unknown",
         };
 
-    private BatchBuffer RentBuffer()
-        => _buffers.TryTake(out var buffer) ? buffer : new BatchBuffer(_settings.BatchSize);
-
-    private void ReturnBuffer(BatchBuffer buffer)
-    {
-        buffer.Clear();
-        _buffers.Add(buffer);
-    }
-
     /// <summary>
-    /// Reusable per-batch storage: received messages, the subset that decoded, their events, and a one-element
-    /// list for per-message fallback. Pooled so steady-state batches do not allocate.
+    /// Per-batch storage: received messages, the subset that decoded, their events, and a one-element list for
+    /// per-message fallback. The consumer owns exactly one and clears it between batches, so steady-state
+    /// batches do not allocate.
     /// </summary>
     private sealed class BatchBuffer(int capacity)
     {
@@ -674,8 +618,8 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
 
     private static partial class Log
     {
-        [LoggerMessage(1, LogLevel.Information, "Queue consumer for '{Queue}' starting with up to {MaxConcurrentBatches} concurrent batch(es), batch size {BatchSize}, visibility timeout {VisibilityTimeout}")]
-        public static partial void ConsumerStarting(ILogger logger, string queue, int maxConcurrentBatches, int batchSize, TimeSpan visibilityTimeout);
+        [LoggerMessage(1, LogLevel.Information, "Queue consumer for '{Queue}' starting with batch size {BatchSize}, visibility timeout {VisibilityTimeout}")]
+        public static partial void ConsumerStarting(ILogger logger, string queue, int batchSize, TimeSpan visibilityTimeout);
 
         [LoggerMessage(2, LogLevel.Information, "Queue consumer for '{Queue}' stopped")]
         public static partial void ConsumerStopped(ILogger logger, string queue);

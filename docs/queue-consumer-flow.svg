@@ -82,7 +82,7 @@
   <text x="56" y="332" class="lane">Altinn.Auth.AuditLog container app · per replica · én QueueBatchConsumer&lt;TEvent&gt; per kø</text>
 
   <!-- ===== Lane 1: poll loop ===== -->
-  <text x="60" y="372" class="lane">1 · Poll-løkke (én per kø, kjører til stop-signal)</text>
+  <text x="60" y="372" class="lane">1 · Poll-løkke (én per kø, strengt sekvensiell, kjører til stop-signal)</text>
 
   <rect x="60" y="410" width="200" height="70" rx="4" class="box"/>
   <text x="72" y="430" class="h">Circuit open?</text>
@@ -90,27 +90,27 @@
   <text x="72" y="464" class="t">sjekk igjen</text>
 
   <rect x="300" y="410" width="240" height="70" rx="4" class="box"/>
-  <text x="312" y="430" class="h">Acquire slot</text>
-  <text x="312" y="448" class="t mono">Semaphore(MaxConcurrentBatches)</text>
-  <text x="312" y="464" class="small">default 4 (authz), 2 (authn)</text>
+  <text x="312" y="430" class="h">Tøm buffer</text>
+  <text x="312" y="448" class="t mono">BatchBuffer.Clear()</text>
+  <text x="312" y="464" class="small">ett buffer per konsument, gjenbrukes</text>
 
   <rect x="580" y="410" width="260" height="70" rx="4" class="box"/>
   <text x="592" y="430" class="h mono">ReceiveMessages(32)</text>
   <text x="592" y="448" class="t">visibilityTimeout 5 min</text>
-  <text x="592" y="464" class="small">fyller pooled BatchBuffer.Messages</text>
+  <text x="592" y="464" class="small">fyller BatchBuffer.Messages</text>
 
   <rect x="880" y="345" width="250" height="46" rx="4" class="box"/>
-  <text x="892" y="363" class="h">0 meldinger → release slot</text>
+  <text x="892" y="363" class="h">0 meldinger</text>
   <text x="892" y="380" class="t">backoff 1 s → 30 s (dobling), på nytt</text>
 
   <rect x="880" y="505" width="250" height="46" rx="4" class="box"/>
-  <text x="892" y="523" class="h">Receive feilet → release slot</text>
+  <text x="892" y="523" class="h">Receive feilet</text>
   <text x="892" y="540" class="t">backoff 2 s → 60 s (dobling), på nytt</text>
 
   <rect x="1180" y="410" width="240" height="70" rx="4" class="box"/>
-  <text x="1192" y="430" class="h">n meldinger → StartBatch</text>
-  <text x="1192" y="448" class="t">egen task; slot og buffer frigis</text>
-  <text x="1192" y="464" class="t">når batchen er ferdig</text>
+  <text x="1192" y="430" class="h">n meldinger → await batch</text>
+  <text x="1192" y="448" class="t">løkka venter til batchen er ferdig,</text>
+  <text x="1192" y="464" class="t">så neste receive</text>
 
   <path d="M 260 445 L 300 445" class="arrow"/>
   <path d="M 540 445 L 580 445" class="arrow"/>
@@ -121,11 +121,11 @@
   <text x="846" y="476" class="small">feil</text>
   <text x="1000" y="440" class="small">n &gt; 0</text>
 
-  <!-- StartBatch -> lane 2 -->
+  <!-- poll loop -> batch (lane 2) -->
   <path d="M 1300 480 L 1300 575 L 190 575 L 190 630" class="arrow"/>
 
   <!-- ===== Lane 2: batch task ===== -->
-  <text x="60" y="605" class="lane">2 · Batch-task (inntil MaxConcurrentBatches samtidig)</text>
+  <text x="60" y="605" class="lane">2 · Batch (én om gangen per konsument; parallellitet = antall replicas)</text>
 
   <rect x="60" y="630" width="260" height="70" rx="4" class="box"/>
   <text x="72" y="650" class="h mono">CreateAsyncScope()</text>

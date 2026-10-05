@@ -19,9 +19,9 @@ public sealed class AuthenticationEventMessageDecoder : MessageDecoder<Authentic
     }
 
     /// <inheritdoc/>
-    protected override void Validate(AuthenticationEvent @event)
+    protected override void Validate(AuthenticationEvent evt)
     {
-        if (!@event.Created.HasValue)
+        if (!evt.Created.HasValue)
         {
             MessageDecodeException.ThrowValidationFailed("Authentication event is missing 'created'");
         }

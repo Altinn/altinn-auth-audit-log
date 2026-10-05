@@ -38,7 +38,7 @@ public abstract class MessageDecoder<TEvent>
     /// <exception cref="MessageDecodeException">If the message cannot be decoded or fails validation.</exception>
     public TEvent Decode(ReadOnlySpan<byte> message)
     {
-        message = TrimStart(message);
+        message = message.TrimStart(Whitespace);
         if (message.Length < 2)
         {
             MessageDecodeException.ThrowTooSmall(message.Length);
@@ -64,7 +64,7 @@ public abstract class MessageDecoder<TEvent>
                 MessageDecodeException.ThrowInvalidBase64();
             }
 
-            var decoded = TrimStart(buffer.AsSpan(0, bytesWritten));
+            ReadOnlySpan<byte> decoded = buffer.AsSpan(0, bytesWritten).TrimStart(Whitespace);
             if (TryParseVersion(decoded, out version))
             {
                 return Finish(DecodeVersioned(version, decoded[2..]));
@@ -81,12 +81,12 @@ public abstract class MessageDecoder<TEvent>
     /// <summary>
     /// Validates a decoded event; throw via <see cref="MessageDecodeException.ThrowValidationFailed"/> on failure.
     /// </summary>
-    protected abstract void Validate(TEvent @event);
+    protected abstract void Validate(TEvent evt);
 
-    private TEvent Finish(TEvent @event)
+    private TEvent Finish(TEvent evt)
     {
-        Validate(@event);
-        return @event;
+        Validate(evt);
+        return evt;
     }
 
     private TEvent DecodeVersioned(ushort version, ReadOnlySpan<byte> payload)
@@ -126,10 +126,12 @@ public abstract class MessageDecoder<TEvent>
                         return ParseJson(buffer.AsSpan(0, written));
 
                     case OperationStatus.DestinationTooSmall:
-                        var larger = ArrayPool<byte>.Shared.Rent(buffer.Length * 2);
-                        buffer.AsSpan(0, written).CopyTo(larger);
-                        ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
-                        buffer = larger;
+                        // Swap before returning the old buffer, so the finally block always returns the live one
+                        // exactly once even if this Return throws.
+                        var smaller = buffer;
+                        buffer = ArrayPool<byte>.Shared.Rent(smaller.Length * 2);
+                        smaller.AsSpan(0, written).CopyTo(buffer);
+                        ArrayPool<byte>.Shared.Return(smaller, clearArray: true);
                         break;
 
                     default:
@@ -178,16 +180,7 @@ public abstract class MessageDecoder<TEvent>
         return false;
     }
 
-    private static ReadOnlySpan<byte> TrimStart(ReadOnlySpan<byte> span)
-    {
-        var i = 0;
-        while (i < span.Length && span[i] is (byte)' ' or (byte)'\t' or (byte)'\r' or (byte)'\n')
-        {
-            i++;
-        }
-
-        return span[i..];
-    }
+    private static ReadOnlySpan<byte> Whitespace => " \t\r\n"u8;
 
     private static JsonSerializerOptions CreateJsonOptions()
     {

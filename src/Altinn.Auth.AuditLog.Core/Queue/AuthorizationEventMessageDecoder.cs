@@ -20,24 +20,24 @@ public sealed class AuthorizationEventMessageDecoder : MessageDecoder<Authorizat
     }
 
     /// <inheritdoc/>
-    protected override void Validate(AuthorizationEvent @event)
+    protected override void Validate(AuthorizationEvent evt)
     {
-        if (!@event.Created.HasValue)
+        if (!evt.Created.HasValue)
         {
             MessageDecodeException.ThrowValidationFailed("Authorization event is missing 'created'");
         }
 
-        if (!@event.Decision.HasValue)
+        if (!evt.Decision.HasValue)
         {
             MessageDecodeException.ThrowValidationFailed("Authorization event is missing 'decision'");
         }
 
-        if (string.IsNullOrEmpty(@event.Operation))
+        if (string.IsNullOrEmpty(evt.Operation))
         {
             MessageDecodeException.ThrowValidationFailed("Authorization event is missing 'operation'");
         }
 
-        if (@event.ContextRequestJson.ValueKind != JsonValueKind.Object)
+        if (evt.ContextRequestJson.ValueKind != JsonValueKind.Object)
         {
             MessageDecodeException.ThrowValidationFailed("Authorization event 'contextRequestJson' must be an object");
         }

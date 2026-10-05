@@ -8,7 +8,7 @@ public class QueueConsumerSettingsValidationTests
     [Fact]
     public void Disabled_IsAlwaysValid()
     {
-        var settings = new QueueConsumerSettings { Enabled = false, Authorization = { MaxConcurrentBatches = 0, BatchSize = 99 } };
+        var settings = new QueueConsumerSettings { Enabled = false, Authorization = { MaxDequeueCount = 0, BatchSize = 99 } };
 
         Assert.True(QueueConsumerDependencyInjectionExtensions.ValidateSettings(settings, out _));
     }
@@ -45,15 +45,15 @@ public class QueueConsumerSettingsValidationTests
 
     [Theory]
     [InlineData(0)]
-    [InlineData(65)]
-    public void NestedQueue_MaxConcurrentBatchesOutOfRange_IsInvalid(int maxConcurrentBatches)
+    [InlineData(1001)]
+    public void NestedQueue_MaxDequeueCountOutOfRange_IsInvalid(int maxDequeueCount)
     {
         var settings = Valid();
-        settings.Authorization.MaxConcurrentBatches = maxConcurrentBatches;
+        settings.Authorization.MaxDequeueCount = maxDequeueCount;
 
         Assert.False(QueueConsumerDependencyInjectionExtensions.ValidateSettings(settings, out var error));
         Assert.Contains("Authorization", error);
-        Assert.Contains("MaxConcurrentBatches", error);
+        Assert.Contains("MaxDequeueCount", error);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class QueueConsumerSettingsValidationTests
     {
         var settings = Valid();
         settings.Authentication.Enabled = false;
-        settings.Authentication.MaxConcurrentBatches = 0;
+        settings.Authentication.BatchSize = 0;
         settings.Authentication.QueueName = string.Empty;
 
         Assert.True(QueueConsumerDependencyInjectionExtensions.ValidateSettings(settings, out var error), error);

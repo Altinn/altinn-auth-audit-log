@@ -306,7 +306,7 @@ public class QueueBatchConsumerTests
     }
 
     [Fact]
-    public async Task Execute_DrainsQueueInBatches_WithBoundedConcurrency_AndStopsCleanly()
+    public async Task Execute_DrainsQueueInBatches_Sequentially_AndStopsCleanly()
     {
         var queue = new FakeRawQueue();
         for (var i = 0; i < 70; i++)
@@ -315,20 +315,15 @@ public class QueueBatchConsumerTests
         }
 
         var processor = new FakeProcessor { Persist = async (_, ct) => await Task.Delay(5, ct) };
-        var sut = CreateConsumer(queue, processor, s =>
-        {
-            s.BatchSize = 32;
-            s.MaxConcurrentBatches = 2;
-        });
+        var sut = CreateConsumer(queue, processor, s => s.BatchSize = 32);
 
         await sut.StartAsync(CancellationToken.None);
         await WaitUntil(() => queue.Deleted.Count == 70);
         await sut.StopAsync(CancellationToken.None);
 
         Assert.Equal(70, queue.Deleted.Count);
-        Assert.All(processor.Batches, b => Assert.InRange(b.Count, 1, 32));
-        Assert.Equal(70, processor.Batches.Sum(b => b.Count));
-        Assert.InRange(processor.MaxObservedConcurrency, 1, 2);
+        Assert.Equal([32, 32, 6], processor.Batches.Select(b => b.Count));
+        Assert.Equal(1, processor.MaxObservedConcurrency); // one batch at a time per consumer
         Assert.True(sut.ExecuteTask!.IsCompletedSuccessfully);
     }
 
@@ -386,7 +381,6 @@ public class QueueBatchConsumerTests
         {
             QueueName = queue.Name,
             BatchSize = 32,
-            MaxConcurrentBatches = 1,
             MaxDequeueCount = 5,
             TransientRetryAttempts = 3,
             TransientRetryBaseDelay = TimeSpan.FromMilliseconds(1),
