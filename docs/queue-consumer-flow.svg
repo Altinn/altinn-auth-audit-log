@@ -1,0 +1,263 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1300" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12">
+  <title>Audit log queue consumer flow (PR #336)</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3a4650"/>
+    </marker>
+    <marker id="arrow-warn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#b45309"/>
+    </marker>
+    <style>
+      .box { fill: #ffffff; stroke: #3a4650; stroke-width: 1.2; }
+      .queue { fill: #e0f2fe; stroke: #0369a1; stroke-width: 1.2; }
+      .poison { fill: #fff7ed; stroke: #b45309; stroke-width: 1.2; }
+      .db { fill: #eef2ff; stroke: #4338ca; stroke-width: 1.2; }
+      .ok { fill: #ecfdf3; stroke: #15803d; stroke-width: 1.2; }
+      .transient { fill: #fff7ed; stroke: #b45309; stroke-width: 1.2; }
+      .dataerr { fill: #fef2f2; stroke: #b91c1c; stroke-width: 1.2; }
+      .systemic { fill: #f5f3ff; stroke: #6b21a8; stroke-width: 1.2; }
+      .frame { fill: #f0faf8; stroke: #0f766e; stroke-width: 1.4; stroke-dasharray: 6 4; }
+      .t { fill: #1d2429; }
+      .h { fill: #1d2429; font-weight: 600; font-size: 13px; }
+      .lane { fill: #0f766e; font-weight: 600; font-size: 14px; letter-spacing: .02em; }
+      .col { fill: #5b6770; font-weight: 600; font-size: 12px; letter-spacing: .08em; }
+      .small { fill: #5b6770; font-size: 11px; }
+      .mono { font-family: Consolas, "Courier New", monospace; font-size: 11.5px; }
+      .arrow { fill: none; stroke: #3a4650; stroke-width: 1.4; marker-end: url(#arrow); }
+      .arrow-warn { fill: none; stroke: #b45309; stroke-width: 1.4; stroke-dasharray: 5 3; marker-end: url(#arrow-warn); }
+      .bus { fill: none; stroke: #3a4650; stroke-width: 1.4; }
+      .bus-warn { fill: none; stroke: #b45309; stroke-width: 1.4; stroke-dasharray: 5 3; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1500" height="1300" fill="#f8f9fa"/>
+
+  <!-- ===== Producers ===== -->
+  <text x="60" y="28" class="col">PRODUSENTER (UTENFOR DETTE REPOET)</text>
+  <rect x="60" y="40" width="300" height="80" rx="4" class="box"/>
+  <text x="72" y="60" class="h">PDP (altinn-auth)</text>
+  <text x="72" y="78" class="t mono">EnqueueAuthorizationEvent</text>
+  <text x="72" y="94" class="t">"01" + Brotli(JSON), base64 ×2</text>
+  <text x="72" y="110" class="small">TTL 90 dager · maks 64 KB per melding</text>
+
+  <rect x="420" y="40" width="300" height="80" rx="4" class="box"/>
+  <text x="432" y="60" class="h">Authentication (altinn-authentication)</text>
+  <text x="432" y="78" class="t mono">EnqueueAuthenticationEvent</text>
+  <text x="432" y="94" class="t">base64(JSON)</text>
+  <text x="432" y="110" class="small">TTL 90 dager</text>
+
+  <!-- ===== Queues ===== -->
+  <text x="60" y="158" class="col">AZURE STORAGE QUEUE</text>
+  <rect x="60" y="170" width="300" height="80" rx="4" class="queue"/>
+  <text x="72" y="190" class="h mono">authorizationeventlog</text>
+  <text x="72" y="208" class="t">Konsumentene leaser maks 32 meldinger per kall.</text>
+  <text x="72" y="224" class="t">Leaset melding er usynlig i VisibilityTimeout (5 min).</text>
+  <text x="72" y="240" class="small">DequeueCount øker for hver receive.</text>
+
+  <rect x="420" y="170" width="300" height="80" rx="4" class="queue"/>
+  <text x="432" y="190" class="h mono">eventlog</text>
+  <text x="432" y="208" class="t">Samme semantikk.</text>
+  <text x="432" y="224" class="small">Function-appen kan lese samme kø i overgangen:</text>
+  <text x="432" y="240" class="small">én melding synlig for kun én mottaker om gangen.</text>
+
+  <rect x="1080" y="170" width="360" height="80" rx="4" class="poison"/>
+  <text x="1092" y="190" class="h mono">&lt;kø&gt;-poison</text>
+  <text x="1092" y="208" class="t mono">authorizationeventlog-poison · eventlog-poison</text>
+  <text x="1092" y="224" class="t">Body kopieres byte-for-byte (Base64-encoding bevart).</text>
+  <text x="1092" y="240" class="small">TTL = aldri · samme navn som Functions brukte (#309)</text>
+
+  <path d="M 210 120 L 210 170" class="arrow"/>
+  <path d="M 570 120 L 570 170" class="arrow"/>
+
+  <!-- queue -> receive bus -->
+  <path d="M 210 250 L 210 285 L 710 285 L 710 410" class="arrow"/>
+  <path d="M 570 250 L 570 285" class="bus"/>
+  <text x="724" y="300" class="small">Base64-dekodet body (QueueMessageEncoding.Base64)</text>
+
+  <!-- poison bus (right side) -->
+  <path d="M 1470 1150 L 1470 210 L 1440 210" class="arrow-warn"/>
+
+  <!-- ===== Container app frame ===== -->
+  <rect x="40" y="310" width="1400" height="968" rx="6" class="frame"/>
+  <text x="56" y="332" class="lane">Altinn.Auth.AuditLog container app · per replica · én QueueBatchConsumer&lt;TEvent&gt; per kø</text>
+
+  <!-- ===== Lane 1: poll loop ===== -->
+  <text x="60" y="372" class="lane">1 · Poll-løkke (én per kø, kjører til stop-signal)</text>
+
+  <rect x="60" y="410" width="200" height="70" rx="4" class="box"/>
+  <text x="72" y="430" class="h">Circuit open?</text>
+  <text x="72" y="448" class="t">ja → vent gjenstående tid,</text>
+  <text x="72" y="464" class="t">sjekk igjen</text>
+
+  <rect x="300" y="410" width="240" height="70" rx="4" class="box"/>
+  <text x="312" y="430" class="h">Acquire slot</text>
+  <text x="312" y="448" class="t mono">Semaphore(MaxConcurrentBatches)</text>
+  <text x="312" y="464" class="small">default 4 (authz), 2 (authn)</text>
+
+  <rect x="580" y="410" width="260" height="70" rx="4" class="box"/>
+  <text x="592" y="430" class="h mono">ReceiveMessages(32)</text>
+  <text x="592" y="448" class="t">visibilityTimeout 5 min</text>
+  <text x="592" y="464" class="small">fyller pooled BatchBuffer.Messages</text>
+
+  <rect x="880" y="345" width="250" height="46" rx="4" class="box"/>
+  <text x="892" y="363" class="h">0 meldinger → release slot</text>
+  <text x="892" y="380" class="t">backoff 1 s → 30 s (dobling), på nytt</text>
+
+  <rect x="880" y="505" width="250" height="46" rx="4" class="box"/>
+  <text x="892" y="523" class="h">Receive feilet → release slot</text>
+  <text x="892" y="540" class="t">backoff 2 s → 60 s (dobling), på nytt</text>
+
+  <rect x="1180" y="410" width="240" height="70" rx="4" class="box"/>
+  <text x="1192" y="430" class="h">n meldinger → StartBatch</text>
+  <text x="1192" y="448" class="t">egen task; slot og buffer frigis</text>
+  <text x="1192" y="464" class="t">når batchen er ferdig</text>
+
+  <path d="M 260 445 L 300 445" class="arrow"/>
+  <path d="M 540 445 L 580 445" class="arrow"/>
+  <path d="M 840 445 L 1180 445" class="arrow"/>
+  <path d="M 840 430 L 860 430 L 860 368 L 880 368" class="arrow"/>
+  <path d="M 840 460 L 860 460 L 860 528 L 880 528" class="arrow"/>
+  <text x="846" y="424" class="small">0</text>
+  <text x="846" y="476" class="small">feil</text>
+  <text x="1000" y="440" class="small">n &gt; 0</text>
+
+  <!-- StartBatch -> lane 2 -->
+  <path d="M 1300 480 L 1300 575 L 190 575 L 190 630" class="arrow"/>
+
+  <!-- ===== Lane 2: batch task ===== -->
+  <text x="60" y="605" class="lane">2 · Batch-task (inntil MaxConcurrentBatches samtidig)</text>
+
+  <rect x="60" y="630" width="260" height="70" rx="4" class="box"/>
+  <text x="72" y="650" class="h mono">CreateAsyncScope()</text>
+  <text x="72" y="668" class="t">resolve</text>
+  <text x="72" y="684" class="t mono">IQueueEventProcessor&lt;TEvent&gt;</text>
+
+  <rect x="360" y="630" width="300" height="186" rx="4" class="box"/>
+  <text x="372" y="650" class="h">Triage per melding</text>
+  <text x="372" y="668" class="t">DequeueCount &gt; MaxDequeueCount (5)</text>
+  <text x="372" y="682" class="small">→ poison (max_dequeue_count_exceeded)</text>
+  <text x="372" y="700" class="t mono">MessageDecoder&lt;TEvent&gt;.Decode(span)</text>
+  <text x="372" y="716" class="small">trim · "{" → v0 JSON · "01" → Brotli → JSON</text>
+  <text x="372" y="730" class="small">ellers base64-dekod én gang og sjekk igjen</text>
+  <text x="372" y="746" class="small">Validate: created, decision, operation, context</text>
+  <text x="372" y="764" class="t">feil → poison (reason-tag):</text>
+  <text x="372" y="778" class="small">too_small · invalid_base64 · invalid_json</text>
+  <text x="372" y="792" class="small">unsupported_version · invalid_compression</text>
+  <text x="372" y="806" class="small">validation_failed</text>
+
+  <rect x="700" y="630" width="200" height="70" rx="4" class="box"/>
+  <text x="712" y="650" class="h">Ingen events igjen?</text>
+  <text x="712" y="668" class="t">→ NothingToPersist,</text>
+  <text x="712" y="684" class="t">batchen er ferdig</text>
+
+  <rect x="940" y="630" width="370" height="170" rx="4" class="box"/>
+  <text x="952" y="650" class="h">3 · PersistAsync(events) i én transaksjon</text>
+  <text x="952" y="668" class="t mono">Service.CreateAuthorizationEvents(events)</text>
+  <text x="952" y="684" class="t mono">Repository.InsertAuthorizationEvents(events)</text>
+  <text x="952" y="704" class="t mono">INSERT INTO authz.eventlogv1 (…)</text>
+  <text x="952" y="718" class="t mono">SELECT * FROM unnest(@sessionid, @created, …,</text>
+  <text x="952" y="732" class="t mono">  @contextrequestjson /* jsonb[] */, @decision, …)</text>
+  <text x="952" y="752" class="t">Ett statement = én transaksjon: alle rader eller ingen.</text>
+  <text x="952" y="768" class="t">Transient → forsøk 2 og 3 etter 1 s og 2 s (+ jitter)</text>
+  <text x="952" y="784" class="small">(koster verken DequeueCount eller visibility timeout)</text>
+
+  <rect x="1330" y="630" width="110" height="170" rx="4" class="db"/>
+  <text x="1340" y="650" class="h">Postgres</text>
+  <text x="1340" y="668" class="small mono">authz.</text>
+  <text x="1340" y="680" class="small mono">eventlogv1</text>
+  <text x="1340" y="700" class="small mono">authentication</text>
+  <text x="1340" y="712" class="small mono">.eventlogv1</text>
+  <text x="1340" y="736" class="small">partisjonert</text>
+  <text x="1340" y="748" class="small">per måned</text>
+  <text x="1340" y="760" class="small">på created</text>
+  <text x="1340" y="784" class="small">prepared stmt</text>
+
+  <path d="M 320 665 L 360 665" class="arrow"/>
+  <path d="M 660 665 L 700 665" class="arrow"/>
+  <path d="M 900 665 L 940 665" class="arrow"/>
+  <path d="M 1310 715 L 1330 715" class="arrow"/>
+  <text x="910" y="658" class="small">events</text>
+
+  <!-- triage poison -> poison bus -->
+  <path d="M 510 816 L 510 828 L 1470 828" class="bus-warn"/>
+  <text x="520" y="842" class="small">til poison-kø: SendMessage(body), deretter DeleteMessage fra kildekøen (feiler send, blir meldingen liggende)</text>
+
+  <!-- persist -> outcomes bus -->
+  <path d="M 1130 800 L 1130 855 L 215 855 L 215 900" class="arrow"/>
+  <path d="M 565 855 L 565 900" class="arrow"/>
+  <path d="M 915 855 L 915 900" class="arrow"/>
+  <path d="M 1265 855 L 1265 900" class="arrow"/>
+  <path d="M 1130 855 L 1265 855" class="bus"/>
+
+  <!-- ===== Lane 3: outcomes ===== -->
+  <text x="60" y="885" class="lane">4 · Utfall per batch (PersistFailureClassifier)</text>
+
+  <rect x="60" y="900" width="310" height="230" rx="4" class="ok"/>
+  <text x="72" y="920" class="h">Committed</text>
+  <text x="72" y="940" class="t mono">DeleteMessage(id, popReceipt) × n</text>
+  <text x="72" y="956" class="t">parallelt, først nå forsvinner meldingene</text>
+  <text x="72" y="976" class="t">delete feiler → logg + metrikk,</text>
+  <text x="72" y="992" class="t">meldingen kommer tilbake = duplikat rad</text>
+  <text x="72" y="1008" class="small">(dekkes av dedup i #308)</text>
+  <text x="72" y="1032" class="t mono">circuit.RecordSuccess()</text>
+  <text x="72" y="1056" class="small">metrikk: messages.persisted,</text>
+  <text x="72" y="1070" class="small">batches{outcome=committed}, batch.duration</text>
+
+  <rect x="410" y="900" width="310" height="230" rx="4" class="transient"/>
+  <text x="422" y="920" class="h">Transient</text>
+  <text x="422" y="936" class="small">SQLSTATE 08/53/57/58/XX, 40001, 40P01, 55P03,</text>
+  <text x="422" y="950" class="small">timeout, IO, "no partition of relation" (23514)</text>
+  <text x="422" y="972" class="t">Etter 3 forsøk: ingen delete, ingen poison.</text>
+  <text x="422" y="988" class="t">Meldingene blir synlige igjen etter 5 min</text>
+  <text x="422" y="1004" class="t">og leases på nytt (DequeueCount +1).</text>
+  <text x="422" y="1028" class="t mono">circuit.RecordFailure()</text>
+  <text x="422" y="1052" class="small">Merk: &gt; 5 redeliveries (~25 min nedetid)</text>
+  <text x="422" y="1066" class="small">sender meldingen til poison via DequeueCount,</text>
+  <text x="422" y="1080" class="small">som i function-appen. Poison har ingen TTL.</text>
+
+  <rect x="760" y="900" width="310" height="230" rx="4" class="dataerr"/>
+  <text x="772" y="920" class="h">DataError</text>
+  <text x="772" y="936" class="small">SQLSTATE 22/23 · ArgumentException (repository-guards)</text>
+  <text x="772" y="958" class="t">Fallback én og én, samme scope:</text>
+  <text x="772" y="976" class="t">  ok → DeleteMessage</text>
+  <text x="772" y="992" class="t">  DataError → poison (persist_failed)</text>
+  <text x="772" y="1008" class="t">  Transient / Systemic → la ligge</text>
+  <text x="772" y="1032" class="t">Bare raden DB avviser forsvinner fra køen,</text>
+  <text x="772" y="1048" class="t">og den ligger verbatim i poison-køen.</text>
+  <text x="772" y="1072" class="t mono">RecordSuccess() / RecordFailure()</text>
+  <text x="772" y="1086" class="small">avhengig av om noe ble liggende</text>
+
+  <rect x="1110" y="900" width="310" height="230" rx="4" class="systemic"/>
+  <text x="1122" y="920" class="h">Systemic</text>
+  <text x="1122" y="936" class="small">SQLSTATE 42xxx (skjema, rettigheter), 3F, 28, 0A,</text>
+  <text x="1122" y="950" class="small">og alle ukjente exceptions</text>
+  <text x="1122" y="972" class="t">Ingen poison, ingen delete, ingen retry.</text>
+  <text x="1122" y="988" class="t">Alle meldinger ville feilet likt, så de</text>
+  <text x="1122" y="1004" class="t">blir liggende til systemet er fikset.</text>
+  <text x="1122" y="1028" class="t mono">circuit.RecordFailure()</text>
+  <text x="1122" y="1052" class="t">Logges som Critical.</text>
+  <text x="1122" y="1076" class="small">Ukjent = systemisk: poison er det eneste</text>
+  <text x="1122" y="1090" class="small">utfallet som fjerner audit-bevis fra kildekøen.</text>
+
+  <!-- DataError poison -> poison bus -->
+  <path d="M 915 1130 L 915 1150 L 1470 1150" class="bus-warn"/>
+
+  <!-- ===== Bottom: circuit breaker, metrics, shutdown ===== -->
+  <rect x="60" y="1165" width="640" height="96" rx="4" class="box"/>
+  <text x="72" y="1185" class="h">CircuitBreaker (én per konsument)</text>
+  <text x="72" y="1203" class="t">5 påfølgende RecordFailure() → open i 30 s → poll-løkka venter i steg «Circuit open?»</text>
+  <text x="72" y="1219" class="t">og leaser ingen nye meldinger. RecordSuccess() lukker og nullstiller.</text>
+  <text x="72" y="1235" class="small">Formål: en DB-nedetid skal ikke brenne DequeueCount på hele backloggen.</text>
+
+  <rect x="740" y="1165" width="680" height="96" rx="4" class="box"/>
+  <text x="752" y="1185" class="h">Observerbarhet og shutdown</text>
+  <text x="752" y="1200" class="small mono">auditlog.queue.messages.{received, persisted, poisoned{reason}, delete_failed, poison_failed}</text>
+  <text x="752" y="1213" class="small mono">auditlog.queue.{receive_failed, batches{outcome}, batch.size, batch.duration, circuit_opened}</text>
+  <text x="752" y="1226" class="small mono">auditlog.queue.{depth (samplet hvert 30 s), oldest_message_age}</text>
+  <text x="752" y="1242" class="t">Health check «queue-consumer»: unhealthy uten receive på 5 min (ikke live-tagget).</text>
+  <text x="752" y="1256" class="small">Shutdown: polling stopper; in-flight batcher får 25 s til commit + delete, resten synlig igjen etter 5 min.</text>
+
+  <!-- circuit feedback to poll loop -->
+  <path d="M 60 1205 L 50 1205 L 50 445 L 60 445" class="arrow"/>
+  <text x="62" y="402" class="small">◂ fra CircuitBreaker: open → pause polling</text>
+</svg>
