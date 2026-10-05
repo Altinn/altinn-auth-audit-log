@@ -68,7 +68,6 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly CircuitBreaker _circuit;
-    private readonly BatchBuffer _buffer;
     private readonly CancellationTokenSource _gracefulCts = new();
 
     public QueueBatchConsumer(
@@ -98,7 +97,6 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
         _timeProvider = timeProvider;
         _logger = logger;
         _circuit = new CircuitBreaker(settings.CircuitBreakFailuresBeforeOpen, settings.CircuitBreakOpenDuration, timeProvider);
-        _buffer = new BatchBuffer(settings.BatchSize);
     }
 
     /// <summary>
@@ -177,6 +175,9 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
         var emptyBackoff = new Backoff(_settings.EmptyQueueBackoff, _settings.EmptyQueueMaxBackoff);
         var failureBackoff = new Backoff(_settings.ReceiveFailureBackoff, _settings.ReceiveFailureMaxBackoff);
 
+        // Owned by this loop only; reused for every batch.
+        var buffer = new BatchBuffer(_settings.BatchSize);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             if (_circuit.IsOpen(out var remaining))
@@ -185,12 +186,12 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
                 continue;
             }
 
-            _buffer.Clear();
+            buffer.Clear();
             int received;
 
             try
             {
-                received = await _queue.ReceiveAsync(_settings.BatchSize, _settings.VisibilityTimeout, _buffer.Messages, stoppingToken);
+                received = await _queue.ReceiveAsync(_settings.BatchSize, _settings.VisibilityTimeout, buffer.Messages, stoppingToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
             {
@@ -216,7 +217,7 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
             try
             {
                 // Uses the graceful token: on shutdown the batch in progress gets ShutdownGracePeriod to commit and delete.
-                await ProcessBatchCoreAsync(_buffer, _gracefulCts.Token);
+                await ProcessBatchAsync(buffer, _gracefulCts.Token);
             }
             catch (OperationCanceledException) when (_gracefulCts.IsCancellationRequested)
             {
@@ -261,17 +262,13 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
     }
 
     /// <summary>
-    /// Processes one batch of already received messages. Exposed for tests; the poll loop fills the buffer directly.
-    /// Not safe to call while the poll loop is running (they share the single buffer).
+    /// Test-only entry point: processes the given, already received messages as one batch, without the poll loop.
+    /// Uses its own buffer, so it never shares state with a running consumer.
     /// </summary>
-    internal Task<BatchOutcome> ProcessBatchAsync(IReadOnlyList<RawQueueMessage> messages, CancellationToken cancellationToken)
-    {
-        _buffer.Clear();
-        _buffer.Messages.AddRange(messages);
-        return ProcessBatchCoreAsync(_buffer, cancellationToken);
-    }
+    internal Task<BatchOutcome> ProcessReceivedMessagesForTestingAsync(IReadOnlyList<RawQueueMessage> messages, CancellationToken cancellationToken)
+        => ProcessBatchAsync(new BatchBuffer(messages), cancellationToken);
 
-    private async Task<BatchOutcome> ProcessBatchCoreAsync(BatchBuffer buffer, CancellationToken cancellationToken)
+    private async Task<BatchOutcome> ProcessBatchAsync(BatchBuffer buffer, CancellationToken cancellationToken)
     {
         var start = _timeProvider.GetTimestamp();
         var queue = _queue.Name;
@@ -556,11 +553,17 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
 
     /// <summary>
     /// Per-batch storage: received messages, the subset that decoded, their events, and a one-element list for
-    /// per-message fallback. The consumer owns exactly one and clears it between batches, so steady-state
-    /// batches do not allocate.
+    /// per-message fallback. The poll loop owns exactly one as a local and clears it between batches, so
+    /// steady-state batches do not allocate.
     /// </summary>
     private sealed class BatchBuffer(int capacity)
     {
+        public BatchBuffer(IReadOnlyList<RawQueueMessage> messages)
+            : this(messages.Count)
+        {
+            Messages.AddRange(messages);
+        }
+
         public List<RawQueueMessage> Messages { get; } = new(capacity);
 
         public List<RawQueueMessage> Accepted { get; } = new(capacity);

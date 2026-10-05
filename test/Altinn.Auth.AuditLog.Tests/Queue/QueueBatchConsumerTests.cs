@@ -21,7 +21,7 @@ public class QueueBatchConsumerTests
         var sut = CreateConsumer(queue, processor);
         var messages = Messages("a", "b", "c");
 
-        var outcome = await sut.ProcessBatchAsync(messages, CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync(messages, CancellationToken.None);
 
         Assert.Equal(BatchOutcome.Committed, outcome);
         var batch = Assert.Single(processor.Batches);
@@ -39,8 +39,8 @@ public class QueueBatchConsumerTests
         var scopes = 0;
         var sut = CreateConsumer(queue, processor, onResolve: () => scopes++);
 
-        await sut.ProcessBatchAsync(Messages("a"), CancellationToken.None);
-        await sut.ProcessBatchAsync(Messages("b"), CancellationToken.None);
+        await sut.ProcessReceivedMessagesForTestingAsync(Messages("a"), CancellationToken.None);
+        await sut.ProcessReceivedMessagesForTestingAsync(Messages("b"), CancellationToken.None);
 
         Assert.Equal(2, scopes);
         Assert.Equal(2, processor.Batches.Count);
@@ -54,7 +54,7 @@ public class QueueBatchConsumerTests
         var sut = CreateConsumer(queue, processor);
         var messages = Messages("a", "bad-1", "c");
 
-        var outcome = await sut.ProcessBatchAsync(messages, CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync(messages, CancellationToken.None);
 
         Assert.Equal(BatchOutcome.Committed, outcome);
         Assert.Equal(["a", "c"], Assert.Single(processor.Batches));
@@ -70,7 +70,7 @@ public class QueueBatchConsumerTests
         var processor = new FakeProcessor();
         var sut = CreateConsumer(queue, processor);
 
-        var outcome = await sut.ProcessBatchAsync(Messages("bad-1"), CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync(Messages("bad-1"), CancellationToken.None);
 
         Assert.Equal(BatchOutcome.NothingToPersist, outcome);
         Assert.Empty(processor.Batches);
@@ -87,7 +87,7 @@ public class QueueBatchConsumerTests
         var exhausted = Message("looks-fine", dequeueCount: 6);
         var fresh = Message("fresh", dequeueCount: 5);
 
-        var outcome = await sut.ProcessBatchAsync([exhausted, fresh], CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync([exhausted, fresh], CancellationToken.None);
 
         Assert.Equal(BatchOutcome.Committed, outcome);
         Assert.Equal(["fresh"], Assert.Single(processor.Batches));
@@ -102,7 +102,7 @@ public class QueueBatchConsumerTests
         var processor = new FakeProcessor { Persist = (_, _) => throw new TimeoutException("db is slow") };
         var sut = CreateConsumer(queue, processor, s => s.TransientRetryAttempts = 3);
 
-        var outcome = await sut.ProcessBatchAsync(Messages("a", "b"), CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync(Messages("a", "b"), CancellationToken.None);
 
         Assert.Equal(BatchOutcome.TransientFailure, outcome);
         Assert.Equal(3, processor.Batches.Count); // 1 + 2 retries
@@ -122,7 +122,7 @@ public class QueueBatchConsumerTests
         };
         var sut = CreateConsumer(queue, processor);
 
-        var outcome = await sut.ProcessBatchAsync(Messages("a"), CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync(Messages("a"), CancellationToken.None);
 
         Assert.Equal(BatchOutcome.Committed, outcome);
         Assert.Equal(2, calls);
@@ -142,7 +142,7 @@ public class QueueBatchConsumerTests
         };
         var sut = CreateConsumer(queue, processor);
 
-        var outcome = await sut.ProcessBatchAsync(Messages("a", "poisonme", "c"), CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync(Messages("a", "poisonme", "c"), CancellationToken.None);
 
         Assert.Equal(BatchOutcome.FallbackPerMessage, outcome);
         Assert.Equal(4, processor.Batches.Count); // 1 batch + 3 singles
@@ -163,7 +163,7 @@ public class QueueBatchConsumerTests
         };
         var sut = CreateConsumer(queue, processor, s => s.TransientRetryAttempts = 2);
 
-        var outcome = await sut.ProcessBatchAsync(Messages("a", "flaky"), CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync(Messages("a", "flaky"), CancellationToken.None);
 
         Assert.Equal(BatchOutcome.FallbackPerMessage, outcome);
         Assert.Equal("a", Assert.Single(queue.Deleted).Body.ToString());
@@ -183,10 +183,10 @@ public class QueueBatchConsumerTests
             s.CircuitBreakOpenDuration = TimeSpan.FromMinutes(1);
         });
 
-        await sut.ProcessBatchAsync(Messages("a"), CancellationToken.None);
+        await sut.ProcessReceivedMessagesForTestingAsync(Messages("a"), CancellationToken.None);
         Assert.False(sut.Circuit.IsOpen(out _));
 
-        await sut.ProcessBatchAsync(Messages("b"), CancellationToken.None);
+        await sut.ProcessReceivedMessagesForTestingAsync(Messages("b"), CancellationToken.None);
         Assert.True(sut.Circuit.IsOpen(out var remaining));
         Assert.True(remaining > TimeSpan.Zero);
     }
@@ -203,7 +203,7 @@ public class QueueBatchConsumerTests
         };
         var sut = CreateConsumer(queue, processor, s => s.CircuitBreakFailuresBeforeOpen = 1);
 
-        var outcome = await sut.ProcessBatchAsync(Messages("a", "b", "c"), CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync(Messages("a", "b", "c"), CancellationToken.None);
 
         Assert.Equal(BatchOutcome.SystemicFailure, outcome);
         Assert.Single(processor.Batches); // no per-message fallback, no in-process retry
@@ -219,7 +219,7 @@ public class QueueBatchConsumerTests
         var processor = new FakeProcessor { Persist = (_, _) => throw new InvalidOperationException("bug") };
         var sut = CreateConsumer(queue, processor);
 
-        var outcome = await sut.ProcessBatchAsync(Messages("a"), CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync(Messages("a"), CancellationToken.None);
 
         Assert.Equal(BatchOutcome.SystemicFailure, outcome);
         Assert.Empty(queue.Poisoned);
@@ -240,7 +240,7 @@ public class QueueBatchConsumerTests
         };
         var sut = CreateConsumer(queue, processor);
 
-        var outcome = await sut.ProcessBatchAsync(Messages("a", "sys"), CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync(Messages("a", "sys"), CancellationToken.None);
 
         Assert.Equal(BatchOutcome.FallbackPerMessage, outcome);
         Assert.Equal("a", Assert.Single(queue.Deleted).Body.ToString());
@@ -255,7 +255,7 @@ public class QueueBatchConsumerTests
         var processor = new FakeProcessor();
         var sut = CreateConsumer(queue, processor);
 
-        var outcome = await sut.ProcessBatchAsync(Messages("a"), CancellationToken.None);
+        var outcome = await sut.ProcessReceivedMessagesForTestingAsync(Messages("a"), CancellationToken.None);
 
         Assert.Equal(BatchOutcome.Committed, outcome);
         Assert.Single(processor.Batches);
@@ -269,7 +269,7 @@ public class QueueBatchConsumerTests
         var processor = new FakeProcessor();
         var sut = CreateConsumer(queue, processor);
 
-        await sut.ProcessBatchAsync(Messages("bad-1"), CancellationToken.None);
+        await sut.ProcessReceivedMessagesForTestingAsync(Messages("bad-1"), CancellationToken.None);
 
         Assert.Empty(queue.Poisoned);
         Assert.Empty(queue.Deleted);
@@ -284,25 +284,9 @@ public class QueueBatchConsumerTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => sut.ProcessBatchAsync(Messages("a"), cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => sut.ProcessReceivedMessagesForTestingAsync(Messages("a"), cts.Token));
 
         Assert.Empty(queue.Deleted);
-    }
-
-    [Fact]
-    public async Task ProcessBatch_ReusesBuffers_BetweenBatches()
-    {
-        // The pooled buffer must be cleared between batches: the second batch must not see the first one's messages.
-        var queue = new FakeRawQueue();
-        var processor = new FakeProcessor();
-        var sut = CreateConsumer(queue, processor);
-
-        await sut.ProcessBatchAsync(Messages("a", "b"), CancellationToken.None);
-        await sut.ProcessBatchAsync(Messages("c"), CancellationToken.None);
-
-        Assert.Equal(2, processor.Batches.Count);
-        Assert.Equal(["c"], processor.Batches[1]);
-        Assert.Equal(3, queue.Deleted.Count);
     }
 
     [Fact]
