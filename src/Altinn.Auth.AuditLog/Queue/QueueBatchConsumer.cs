@@ -69,6 +69,8 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
     private readonly ILogger _logger;
     private readonly CircuitBreaker _circuit;
     private readonly CancellationTokenSource _gracefulCts = new();
+    private long _messagesSinceProgress;
+    private long _batchesSinceProgress;
 
     public QueueBatchConsumer(
         IRawQueue queue,
@@ -240,9 +242,10 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            long? depth = null;
             try
             {
-                var depth = await _queue.GetApproximateMessageCountAsync(stoppingToken);
+                depth = await _queue.GetApproximateMessageCountAsync(stoppingToken);
                 if (depth.HasValue)
                 {
                     _metrics.RecordDepth(_queue.Name, depth.Value);
@@ -255,6 +258,14 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
             catch (Exception ex)
             {
                 Log.DepthSampleFailed(_logger, ex, _queue.Name);
+            }
+
+            // Console-visible liveness: one Information line per sample interval while there is work.
+            var messages = Interlocked.Exchange(ref _messagesSinceProgress, 0);
+            var batches = Interlocked.Exchange(ref _batchesSinceProgress, 0);
+            if (batches > 0 || depth > 0)
+            {
+                Log.Progress(_logger, _queue.Name, messages, batches, _depthSampleInterval, depth, _circuit.ConsecutiveFailures);
             }
 
             await Task.Delay(_depthSampleInterval, _timeProvider, stoppingToken);
@@ -278,6 +289,8 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
 
         _metrics.MessagesReceived(queue, messages.Count);
         RecordOldestMessageAge(messages);
+        Interlocked.Add(ref _messagesSinceProgress, messages.Count);
+        Interlocked.Increment(ref _batchesSinceProgress);
 
         await using var scope = _scopeFactory.CreateAsyncScope();
         var processor = scope.ServiceProvider.GetRequiredService<IQueueEventProcessor<TEvent>>();
@@ -674,5 +687,8 @@ public sealed partial class QueueBatchConsumer<TEvent> : BackgroundService
 
         [LoggerMessage(18, LogLevel.Critical, "Systemic failure persisting batch of {BatchSize} from queue '{Queue}' (schema, privileges or configuration); nothing poisoned, messages left on the queue, pausing polling via circuit breaker")]
         public static partial void SystemicBatchFailure(ILogger logger, Exception exception, int batchSize, string queue);
+
+        [LoggerMessage(19, LogLevel.Information, "Queue '{Queue}': {Messages} messages in {Batches} batches during the last {Interval}; approximate depth {Depth}; consecutive failures {ConsecutiveFailures}")]
+        public static partial void Progress(ILogger logger, string queue, long messages, long batches, TimeSpan interval, long? depth, int consecutiveFailures);
     }
 }
