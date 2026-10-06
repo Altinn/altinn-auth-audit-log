@@ -30,5 +30,11 @@ namespace Altinn.Auth.AuditLog.Core.Services
         {
             await _authorizationEventRepository.InsertAuthorizationEvent(authorizationEvent);
         }
+
+        /// <inheritdoc/>
+        public async Task CreateAuthorizationEvents(IReadOnlyList<AuthorizationEvent> authorizationEvents, CancellationToken cancellationToken = default)
+        {
+            await _authorizationEventRepository.InsertAuthorizationEvents(authorizationEvents, cancellationToken);
+        }
     }
 }

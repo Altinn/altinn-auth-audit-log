@@ -14,5 +14,10 @@ namespace Altinn.Auth.AuditLog.Tests.Mocks
         {
             return Task.FromResult(authenticationEvent);
         }
+
+        public Task InsertAuthenticationEvents(IReadOnlyList<AuthenticationEvent> authenticationEvents, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
     }
 }
