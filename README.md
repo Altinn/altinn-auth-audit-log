@@ -32,6 +32,8 @@ The consumers are configured in the `QueueConsumer` section of `appsettings.json
 
 Required Azure RBAC with `ServiceUri` (managed identity): *Storage Queue Data Message Processor* on the source queues (receive/delete) and *Storage Queue Data Message Sender* on the poison queues. The consumer does not create queues unless `QueueConsumer:CreateQueuesIfNotExists` is set (which additionally needs *Storage Queue Data Contributor*); the source queues are created by the producers and the poison queues should be provisioned by infrastructure. Metrics are published on the OpenTelemetry meter `Altinn.Auth.AuditLog` (`auditlog.queue.*`), and the `queue-consumer` health check reports a consumer that has stopped receiving.
 
+Where the metrics go is decided by `Altinn.Authorization.ServiceDefaults`: if `OTEL_EXPORTER_OTLP_ENDPOINT` is set they are exported over OTLP; otherwise they go to Application Insights when a connection string is configured as `ConnectionStrings:ApplicationInsights`, `ApplicationInsights:ConnectionString` or `ApplicationInsights:InstrumentationKey` (for instance from Key Vault). The app also accepts the standard Azure variable `APPLICATIONINSIGHTS_CONNECTION_STRING` and maps it to `ConnectionStrings__ApplicationInsights` at start-up. If none of these are set, nothing is exported and the start-up log says `No ApplicationInsights connection string - skipping Application Insights`. In Application Insights the metrics appear as custom metrics with `queue`, `outcome` and `reason` as custom dimensions.
+
 The Azure Functions app in `src/Functions` is the previous queue consumer. It is kept until the in-process consumers have been verified in production and will then be removed (see #335).
 
 ### 3. Auditlog Container Application

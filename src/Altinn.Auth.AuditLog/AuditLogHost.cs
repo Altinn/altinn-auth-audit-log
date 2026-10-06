@@ -1,3 +1,4 @@
+using Altinn.Auth.AuditLog.Configuration;
 using Altinn.Auth.AuditLog.Core.Models;
 using Altinn.Auth.AuditLog.Core.Services;
 using Altinn.Auth.AuditLog.Core.Services.Interfaces;
@@ -24,6 +25,13 @@ namespace Altinn.Auth.AuditLog
         /// <param name="args">The command line arguments.</param>
         public static WebApplication Create(string[] args)
         {
+            // Must run before ServiceDefaults reads configuration, otherwise a Container App that only sets the
+            // standard Azure variable exports no telemetry at all.
+            if (ApplicationInsightsEnvironment.MapAzureVariable())
+            {
+                Console.WriteLine($"Mapped {ApplicationInsightsEnvironment.AzureVariable} to {ApplicationInsightsEnvironment.TargetVariable} for ServiceDefaults");
+            }
+
             var builder = AltinnHost.CreateWebApplicationBuilder("auditlog", args);
             var services = builder.Services;
             var config = builder.Configuration;
