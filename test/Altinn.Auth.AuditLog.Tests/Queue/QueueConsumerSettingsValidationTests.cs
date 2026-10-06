@@ -1,5 +1,7 @@
 using Altinn.Auth.AuditLog.Configuration;
 using Altinn.Auth.AuditLog.Queue;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Altinn.Auth.AuditLog.Tests.Queue;
 
@@ -119,6 +121,32 @@ public class QueueConsumerSettingsValidationTests
         settings.Authentication.QueueName = string.Empty;
 
         Assert.True(QueueConsumerDependencyInjectionExtensions.ValidateSettings(settings, out var error), error);
+    }
+
+    [Fact]
+    public void AddQueueConsumers_EnabledWithoutConnection_FailsWithReadableMessage()
+    {
+        // Regression: this used to surface as ArgumentNullException from new Uri(null) inside AddAzureClients.
+        var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder();
+        builder.Configuration.AddInMemoryCollection([new("QueueConsumer:Enabled", "true")]);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.AddQueueConsumers());
+
+        Assert.Contains("QueueConsumer is enabled", ex.Message);
+        Assert.Contains("ConnectionString or ServiceUri", ex.Message);
+        Assert.Contains("QueueConsumer__ConnectionString", ex.Message);
+    }
+
+    [Fact]
+    public void AddQueueConsumers_Disabled_DoesNotRequireConnection()
+    {
+        var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder();
+        builder.Configuration.AddInMemoryCollection([new("QueueConsumer:Enabled", "false")]);
+
+        builder.AddQueueConsumers();
+        using var host = builder.Build();
+
+        Assert.NotNull(host.Services.GetService<QueueConsumerMetrics>());
     }
 
     private static QueueConsumerSettings Valid()

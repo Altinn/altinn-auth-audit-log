@@ -42,6 +42,17 @@ public static class QueueConsumerDependencyInjectionExtensions
             return builder;
         }
 
+        // ValidateOnStart runs after service registration, too late to stop the Azure client registration below
+        // from dereferencing a missing ServiceUri. Fail here instead, with a message that names the fix.
+        if (!ValidateSettings(settings, out var error))
+        {
+            throw new InvalidOperationException(
+                $"QueueConsumer is enabled but its configuration is invalid: {error}. " +
+                $"Set {QueueConsumerSettings.SectionName}:ConnectionString or {QueueConsumerSettings.SectionName}:ServiceUri " +
+                $"(environment variables {QueueConsumerSettings.SectionName}__ConnectionString / {QueueConsumerSettings.SectionName}__ServiceUri), " +
+                $"or set {QueueConsumerSettings.SectionName}:Enabled=false.");
+        }
+
         builder.Services.AddAzureClients(clients =>
         {
             var client = !string.IsNullOrEmpty(settings.ConnectionString)
