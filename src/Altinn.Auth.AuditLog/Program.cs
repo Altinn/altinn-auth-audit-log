@@ -4,7 +4,7 @@ using System;
 
 WebApplication app = AuditLogHost.Create(args);
 
-app.AddDefaultAltinnMiddleware(errorHandlingPath: "/auditlog/api/v1/error");
+app.AddDefaultAltinnMiddleware();
 Console.WriteLine($"The application environment: {app.Environment.EnvironmentName}");
 
 if (app.Environment.IsDevelopment())
